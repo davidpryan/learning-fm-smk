@@ -1,0 +1,6 @@
+[submodule "vendor/fm1_open"]
+	path = vendor/fm1_open
+	url = https://github.com/m-vave/fm1_open.git
+[submodule "vendor/smk37_open"]
+	path = vendor/smk37_open
+	url = https://github.com/m-vave/smk37_open.git

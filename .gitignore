@@ -1,0 +1,6 @@
+build/
+_site/
+dist/
+release/
+*.o
+.DS_Store

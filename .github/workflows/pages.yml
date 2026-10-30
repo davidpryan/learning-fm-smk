@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception
+# Install site on GitHub Pages: one page per pair, each with the browser
+# installer for both boards, the checksums, the backup-first procedure and
+# the way back to stock. Runs after a release is published, or by hand.
+# Enable Pages for the repository (Settings -> Pages -> Source: GitHub Actions).
+name: pages
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Download latest release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release
+          gh release download --repo "${{ github.repository }}" --dir release --pattern '*' || echo "no release yet: site will carry docs only"
+      - name: Build site
+        run: |
+          python3 tools/make_lessons.py
+          python3 tools/build_site.py --release release --out _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,139 @@
+# SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception
+# Tagged release: builds all eight packages with the complete browser
+# workbench (the installer page), uploads packages, SHA-256 sidecars,
+# provenance, offline installer HTML and the corresponding source archive
+# for every package, then triggers the install site.
+#
+# Tag with: git tag v1.0.0 && git push origin v1.0.0
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [fm1, smk37]
+        stage: [1, 2, 3, 4]
+        model: [elite]
+        include:
+          # The SMK-37 Pro shares the source; build it too so Pro owners get a package.
+          - { board: smk37, stage: 1, model: pro }
+          - { board: smk37, stage: 2, model: pro }
+          - { board: smk37, stage: 3, model: pro }
+          - { board: smk37, stage: 4, model: pro }
+    env:
+      PAIR: ${{ matrix.board }}-s${{ matrix.stage }}${{ matrix.board == 'smk37' && format('-{0}', matrix.model) || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Lessons and tree
+        shell: bash
+        run: |
+          python3 tools/make_lessons.py
+          python3 tools/overlay.py --board ${{ matrix.board }} --stage ${{ matrix.stage }} --model ${{ matrix.model }} --out build/trees/$PAIR
+          python3 tools/audit_safety.py --tree build/trees/$PAIR
+      - name: Toolchain cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: C:\JL\pi32
+          key: jieli-2.5.3-${{ runner.os }}
+      - name: Install JieLi toolchain
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        env:
+          JIELI_TOOLCHAIN_ZIP_URL: ${{ secrets.JIELI_TOOLCHAIN_ZIP_URL }}
+          JIELI_INSTALLER_SHA256: ${{ vars.JIELI_INSTALLER_SHA256 }}
+        run: tools/ci/Install-Toolchain.ps1
+      - name: Toolchain path (cached)
+        if: steps.cache.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: 'Write-Output "FM1_PI32_TOOLCHAIN=C:\JL\pi32" >> $env:GITHUB_ENV'
+      - name: WASI SDK cache (browser workbench build)
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\wasi
+          key: wasi-sdk-27-${{ runner.os }}
+      - name: Source archive URL
+        shell: bash
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_ENV"
+          import os
+          names={1:("lantern","ember"),2:("pulse","root"),3:("shadow","tape"),4:("stage","scribe")}
+          b=os.environ["BOARD"]; s=int(os.environ["STAGE"]); tag=os.environ["TAG"]; repo=os.environ["REPO"]; model=os.environ["MODEL"]
+          name=names[s][1] if b=="fm1" else names[s][0]
+          tagb=b if b=="fm1" else ("smk37e" if model=="elite" else "smk37p")
+          base=f"{name}-stage{s}-{tagb}-V5{s}"
+          print(f"FM1_SOURCE_URL=https://github.com/{repo}/releases/download/{tag}/{base}-source.tar.gz")
+          print(f"PKG_BASE={base}")
+          EOF
+        env:
+          BOARD: ${{ matrix.board }}
+          STAGE: ${{ matrix.stage }}
+          MODEL: ${{ matrix.model }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+      - name: Build package + workbench (FM-1)
+        if: matrix.board == 'fm1'
+        shell: pwsh
+        working-directory: build/trees/${{ env.PAIR }}
+        env:
+          FM1_WASI_SDK: ${{ runner.temp }}\wasi\wasi-sdk-27.0-x86_64-windows
+        run: ./build.bat --package
+      - name: Build package + workbench (SMK-37)
+        if: matrix.board == 'smk37'
+        shell: pwsh
+        working-directory: build/trees/${{ env.PAIR }}
+        env:
+          FM1_WASI_SDK: ${{ runner.temp }}\wasi\wasi-sdk-27.0-x86_64-windows
+        run: ./build.bat ${{ matrix.model }} --package
+      - name: Collect, hash, provenance, installer HTML
+        shell: bash
+        run: |
+          python3 tools/collect_packages.py --board ${{ matrix.board }} --stage ${{ matrix.stage }} --model ${{ matrix.model }} --out dist
+          if [ "${{ matrix.board }}" = fm1 ]; then
+            cp "build/trees/$PAIR/build/official-web/FM1-Official-Open-Source.html" "dist/$PKG_BASE-installer.html"
+          else
+            cp "build/trees/$PAIR/build/official-web/${{ matrix.model }}/SMK37-Open-Source.html" "dist/$PKG_BASE-installer.html"
+          fi
+          python3 tools/verify_release.py dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ env.PAIR }}
+          path: dist/
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: all
+          merge-multiple: true
+      - name: Release notes
+        run: |
+          {
+            echo "## Learning firmware pairs ${{ github.ref_name }}"
+            echo
+            echo "Verify every download: \`sha256sum -c <file>.sha256\`. Read SAFETY.md before installing."
+            echo
+            echo "| Package | SHA-256 |"; echo "| --- | --- |"
+            for f in all/*.fwsc; do echo "| $(basename "$f") | $(cut -d' ' -f1 "$f.sha256") |"; done
+          } > notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: |
+            all/*.fwsc
+            all/*.sha256
+            all/*.provenance.json
+            all/*-installer.html
+            all/*-source.tar.gz

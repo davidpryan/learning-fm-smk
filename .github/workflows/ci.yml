@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception
+# Host validation: every (board, stage) tree is assembled, compiled natively
+# against M-VAVE's browser engine and driven through the simulator tests.
+# No toolchain, no device, no secrets. Runs on every push and pull request.
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Lessons
+        run: python3 tools/make_lessons.py
+      - name: Assemble all trees
+        run: python3 tools/overlay.py --all
+      - name: Host build and tests
+        run: |
+          set -e
+          for t in build/trees/*; do echo "== $t"; tools/host_build.sh "$t"; done
+      - name: Flash-safety audit
+        run: python3 tools/audit_safety.py
+      - name: Lesson files
+        uses: actions/upload-artifact@v4
+        with:
+          name: lesson-packs
+          path: build/lessons/
