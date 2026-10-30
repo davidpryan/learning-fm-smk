@@ -1,4 +1,7 @@
-# Stage 1 — Lantern (SMK-37 Elite / Pro) / Ember (FM-1)
+# Page 1 — Lantern (SMK-37 Elite) / Ember (FM-1)
+
+> These firmwares build on SLOOP: the SMK-37 Elite's buttons are the ones its HARDWARE CALIBRATION maps to SLOOP's FX, SEL, ENV, LFO, EDIT, GLO, HOME, SAVE, ARP, SEQ, PLAY, REC, OCT−/OCT+ (see `sloop/SMK37.md`); there is no SHIFT, so GLO is the modifier on both boards. Sounds are SLOOP's engines and presets (K1 engine, K2 preset on page 1). SEQ cycles the four pages; GLO + HOME held two seconds returns to plain SLOOP.
+
 
 Page 1 is the tutor: the screen names every note and chord you play, the
 pads are a chord palette coloured by function, and PLAY runs a drill
@@ -18,12 +21,12 @@ your attempt below, misses red), why-hint line, notice bar.
 Out-of-key notes: with hints on they are nudged to the nearest scale note;
 with hints off they are muted and the screen says NOT IN THE KEY.
 
-## SMK-37 Elite / Pro (Lantern)
+## SMK-37 Elite (Lantern)
 
 | Control | Function |
 |---|---|
 | Keys | Play. C3 is the lowest key at octave 0 |
-| SHIFT + key | Set the key's root to that note |
+| GLO + key | Set the key's root to that note |
 | Pads 1-7 | Triads of degrees I-VII (green I, orange V, cyan IV, blue minor, red dim) |
 | Pads 9-15 | The same degrees as sevenths (dimmer) |
 | Pad 8 / 16 | sus4 / sus2 of the last chord |
@@ -42,7 +45,7 @@ with hints off they are muted and the screen says NOT IN THE KEY.
 | ARP | Start the picked lesson / stop the running one |
 | HOME | Stop everything, release all notes |
 | OCT -/+ | Octave |
-| SHIFT + HOME (hold 2 s) | Switch between LEARN and the stock SMK37 Open UI |
+| GLO + HOME (hold 2 s) | Switch between LEARN and plain SLOOP |
 
 Faders and wheels pass through to the stock engine (pitch and mod work on
 the keys track). The pads use the colour language of every stage; the

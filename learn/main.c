@@ -49,6 +49,13 @@ static void learn_set_page(unsigned page)
     lmidi_all_off();
     lpage = (uint8_t)page;
     stage_init_page(page);
+    {
+        static const char *const NM[4] = {LEARN_PADS ? "PAGE 1 LANTERN: HEAR IT" : "PAGE 1 EMBER: HEAR IT",
+                                          LEARN_PADS ? "PAGE 2 PULSE: LOOP IT" : "PAGE 2 ROOT: LOOP IT",
+                                          LEARN_PADS ? "PAGE 3 SHADOW: GROW IT" : "PAGE 3 TAPE: GROW IT",
+                                          LEARN_PADS ? "PAGE 4 STAGE: FINISH IT" : "PAGE 4 SCRIBE: FINISH IT"};
+        learn_notice(NM[(page - 1u) % 4u], 1500);
+    }
     lx.redraw = 1;
     ld_dirty = 1;
 }
@@ -101,7 +108,7 @@ static void lesson_step_done(unsigned passed, unsigned score)
                 les_idx, score);
         if (l->unlocks)
             log_unlock(l->unlocks);
-        learn_notice("LESSON DONE!", 2000);
+        learn_notice(l->unlocks & UNLOCK_STAGE2 && lpage == 1u && LEARN_STAGE > 1 ? "LESSON DONE! SEQ: PAGE 2 IS READY" : "LESSON DONE!", 2500);
         les_idx = 0;
         les_step = 0;
     } else {

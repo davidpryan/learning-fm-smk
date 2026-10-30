@@ -577,7 +577,7 @@ static void stage2_control(struct lctx *x)
     if (!s2_graduated && s2_take_valid && x->slow_percent >= 100u && log_unlocked(UNLOCK_SWING) && x->now - s2_session_start < 300000u) {
         unsigned chords = 0, i;
         for (i = 0; i < song_beats(); i++) if (lsong.chord[i].degree) chords++;
-        if (chords && lsong.lane[LANE_KICK].mask) { s2_graduated = 1; log_add(LOGK_SONG, 1, 0, lsong.tempo, 0, lesson_running(), 100); learn_notice("GRADUATED: A WHOLE LOOP!", 3000); send_log(); }
+        if (chords && lsong.lane[LANE_KICK].mask) { s2_graduated = 1; log_add(LOGK_SONG, 1, 0, lsong.tempo, 0, lesson_running(), 100); log_unlock(UNLOCK_STAGE3); learn_notice(LEARN_STAGE > 2 ? "A WHOLE LOOP! SEQ: PAGE 3 IS READY" : "GRADUATED: A WHOLE LOOP!", 3000); send_log(); }
     }
     llit_keys = lbright_keys = 0;
 }

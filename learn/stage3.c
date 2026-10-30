@@ -279,7 +279,8 @@ static void take_capture(struct lctx *x)
         lesson_step_done(notes >= need && score >= (ls->target ? ls->target : 80u) && !s3_rec_slow, score);
     }
     p[0] = LT_KEYS; p[1] = 1; p[2] = s3_take_count; lsyx_send(LCMD_TRACK, p, 3);
-    learn_notice(s3_rec_slow ? "TAKE SAVED (SLOW)" : "TAKE SAVED", 900);
+    if (score >= 80u && notes >= 4u && !s3_rec_slow && !log_unlocked(UNLOCK_STAGE4)) { log_unlock(UNLOCK_STAGE4); learn_notice(LEARN_STAGE > 3 ? "A TAKE IN KEY! SEQ: PAGE 4 IS READY" : "A TAKE IN KEY!", 2500); }
+    else learn_notice(s3_rec_slow ? "TAKE SAVED (SLOW)" : "TAKE SAVED", 900);
     render_melody_shadow();
     x->redraw = 1;
 }

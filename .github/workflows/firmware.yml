@@ -12,6 +12,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   host-tests:
     # the learn layer on SLOOP's host UI harness (gcc, no toolchain): the switch, keys, drills, lessons, screens
@@ -49,10 +52,8 @@ jobs:
         include:
           - { name: sloop-baseline-elite, board: smk37, model: elite, learn: 0, stage: 0 }
           - { name: sloop-baseline-fm1,   board: fm1,   model: "",    learn: 0, stage: 0 }
-          - { name: learn-s1-elite,       board: smk37, model: elite, learn: 1, stage: 1 }
-          - { name: learn-s1-fm1,         board: fm1,   model: "",    learn: 1, stage: 1 }
-          - { name: learn-s2-elite,       board: smk37, model: elite, learn: 1, stage: 2 }
-          - { name: learn-s2-fm1,         board: fm1,   model: "",    learn: 1, stage: 2 }
+          - { name: learn-elite,          board: smk37, model: elite, learn: 1, stage: 4 }
+          - { name: learn-fm1,            board: fm1,   model: "",    learn: 1, stage: 4 }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,7 +84,9 @@ jobs:
           LEARN_STAGE: ${{ matrix.stage }}
         run: |
           set +e
-          ./build.sh 2>&1 | tee ../build-${{ matrix.name }}.log
+          rel=""
+          case "$GITHUB_REF_NAME" in v[0-9].[0-9]*) rel="--release ${GITHUB_REF_NAME#v}";; esac
+          ./build.sh $rel 2>&1 | tee ../build-${{ matrix.name }}.log
           st=${PIPESTATUS[0]}
           if [ "$st" != 0 ]; then   # the errors as annotations too (readable through the API when the log is not)
             grep -nE "error|Error|exceeds|undefined|overflow|FAIL" ../build-${{ matrix.name }}.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done
@@ -104,3 +107,49 @@ jobs:
             sloop/build/*.fwsc
             build-${{ matrix.name }}.log
           if-no-files-found: error
+
+  site:
+    # a tag vX.Y: the install site (one installer page per device) on GitHub Pages, and a release with the packages
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: learn-*
+          path: pkgs
+      - name: Site
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          elite=$(ls pkgs/learn-elite/sloop/build/*.fwsc | head -1)
+          fm1=$(ls pkgs/learn-fm1/sloop/build/*.fwsc | head -1)
+          python3 tools/make_site.py "$ver" site "$elite" "$fm1"
+          cp pkgs/learn-*/build-*.log site/ || true
+          ls -l site
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" site/*.fwsc site/*.sha256 site/provenance.json \
+            --title "Learn firmware $ver" \
+            --notes "One firmware per device, four pages. Install from the site: ${{ steps.deploy.outputs.page_url }} — read docs/SAFETY.md first. Checksums in the .sha256 sidecars; provenance.json names the commit and the SLOOP upstream commit."

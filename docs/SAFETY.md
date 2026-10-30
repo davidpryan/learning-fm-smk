@@ -1,62 +1,56 @@
 # Safety: installing and going back without bricking anything
 
-These firmwares are built the same way M-VAVE builds its own open firmware
-and are installed with M-VAVE's own browser workbench. That is the single
-most important safety property: nothing here invents a flashing path.
+These firmwares are SLOOP builds. They are packaged by SLOOP's own
+`tools/build.py` (the same update loader, the same `.fwsc` format, the same
+stock update protocol) and installed with SLOOP's own web installer. That is
+the single most important safety property: **nothing in this project invents
+a flashing path**, and the stock tools still see the device as usual.
 
-## What can and cannot go wrong
+## What is and is not written
 
-**The bootloader, Bluetooth pairing data, factory calibration and chip key
-are not written by anything in this project.** On the SMK-37 Elite / Pro those live
-in Flash ranges the stock second-stage bootloader and the SDK keep outside
-the application's reach. The learn layer only ever calls the SDK; it makes
-**no Flash writes at all** (practice log, takes and sections are RAM, and the
-CI audit fails the build if a Flash-writing call appears in the learn code).
+**The learn layer writes no Flash at all.** The practice log, takes, sections
+and lessons live in RAM; the lesson packs are compiled in. What SLOOP itself
+stores (its project autosave, settings, user presets, samples) is SLOOP's
+normal, well-tested behaviour and is unchanged by the learn layer.
 
-What *can* go wrong, and what to do:
+Never written by SLOOP or by this project: the bootloader (0x00000–0x03FFF),
+the Bluetooth pairing area (BTIF), the factory calibration record
+(USRTRIM, `trimdat`), and the chip key. The SMK-37 board layer documents
+these ranges and asserts them.
+
+## Risks and what protects you
 
 | Risk | Likelihood | Protection |
 | --- | --- | --- |
-| Interrupted write (cable pulled, battery dies) | the main real risk | Keep USB connected and the device on until it restarts. The loader stays installed; re-run the installer. |
-| Wrong model package (Elite vs Pro, FM-1 vs SMK) | low | The update identity in each package names the model; the loader asks you to confirm the physical model and refuses a mismatch. Only install the package named for the device in your hands. |
-| Lost projects, voices or samples | medium if you skip the backup | Back up in the workbench first (Projects & sounds). Learn firmware uses the same project format but do not rely on it. |
-| A bug in the learn layer freezes the screen | possible, it is new code | Audio and MIDI keep running on the engine's own tasks. Power-cycle. Hold SHIFT+HOME (SMK) or GLO+HOME (FM-1) two seconds to return to the stock UI, which is still inside the firmware. |
-| Tampered download | low | Every package ships with a SHA-256 sidecar and a provenance file naming the exact source commit. `sha256sum -c name.fwsc.sha256`. Install only through M-VAVE's workbench, which checks the package before writing. |
+| Interrupted write (cable pulled, battery dies) | the main real risk | Keep USB connected and the device on until it restarts. The device stays in update mode; press INSTALL again and it finishes. |
+| Wrong device package | low | Each package carries its model identity (`SMK-37 Elite_9xy`, `FM-1_9xy`); the installer checks the connected model and refuses a mismatch. The install site keeps the two devices on separate pages. |
+| Lost projects, presets or samples | low (SLOOP keeps them across installs) | Save a backup from SLOOP's web editor first anyway; it costs nothing. |
+| A bug in the learn layer freezes its screen | possible, it is new code | Hold GLO + HOME two seconds: plain SLOOP, still inside the firmware. Audio runs on SLOOP's own ISR; the layer only queues events. Power-cycling loses nothing but RAM state. |
+| A learn build will not start | low | After two failed starts SLOOP opens its USB recovery screen where the installer can write a package again (see RECOVERY.md). |
+| Tampered download | low | Every package ships with a SHA-256 sidecar and `provenance.json` naming the exact commit and the SLOOP upstream commit. `sha256sum -c name.fwsc.sha256`. |
 
 ## Before every install
 
-1. Charge the device, then run it from USB during the install.
-2. Open the stock workbench and back up projects, voice groups A to D and samples. Keep the files; the learn firmware does not protect them.
-3. Verify the checksum of what you downloaded against the sidecar, and that the sidecar matches the release page.
-4. Install from desktop Chrome or Edge over a USB cable, not Bluetooth.
-5. Confirm the physical model only when it matches the device in your hands.
-6. Do not touch the device until it restarts and shows the stage page.
+1. Charge the device, then run it from USB during the install (a data cable, no hub).
+2. If it runs SLOOP already, save a backup from the SLOOP web editor.
+3. Verify the checksum of what you downloaded against the sidecar.
+4. Open the installer page **for the device in your hands** in desktop Chrome or Edge.
+5. Do not touch the device until it restarts.
 
 ## Going back to stock
 
-M-VAVE's workbench (open.m-vave.com) has a **Restore factory** function
-that uses the unmodified official package (FM-1 V15 / SMK-37 V16). The
-stock M-VAVE updater also works. Your Flash calibration and Bluetooth keys
-are untouched by this project, so the stock firmware comes back complete.
+- **SMK-37 Elite:** M-VAVE's own updater (M-UPGRADE) with the official SMK-37 Elite package, or SLOOP's installer with `--force` and that package. The stock firmware keeps its key/knob/fader mapping in the user sample area; SLOOP's web editor has *Prepare the return to M-Vave* for the case described in `sloop/SMK37.md`.
+- **FM-1:** the installer page's *Return to the official firmware (V15)* with M-VAVE's `FM-1.fwsc`, or M-UPGRADE.
 
-## Moving between stages
+Your calibration and Bluetooth keys are untouched by this project, so the
+stock firmware comes back complete.
 
-Install the next pair's packages over the current one with the same
-workbench flow; no return to stock is needed in between. Stage N contains
-pages 1..N, so nothing is lost.
+## Moving between versions
+
+Install the newer package over the current one with the same installer; no
+return to stock is needed in between. SLOOP keeps projects, presets, samples
+and settings across installs.
 
 ## If the device will not boot
 
-See RECOVERY.md: the loader (reached by the update flow) and, beneath it,
-the chip's mask-ROM USB bootloader, which cannot be erased from software.
-
-## What this project does not do
-
-* It does not write the SMK-37's calibration record, Bluetooth keys, the
-  bootloader, the chip key or the stock resource area, ever.
-* It does not use a custom update loader or packaging; packages are made by
-  the vendor `Build.ps1` and `sdk/Package.cs`, with the vendor's SHA-256
-  checks of the toolchain and SDK in place.
-* It does not ship a package built on a machine nobody can audit: CI builds
-  from a tagged commit, and the provenance file records the commit and the
-  vendor submodule commit.
+See RECOVERY.md.

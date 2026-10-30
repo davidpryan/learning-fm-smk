@@ -1,4 +1,7 @@
-# Stage 3 — Grow it: Shadow (SMK-37 Elite / Pro) + Tape (FM-1)
+# Page 3 — Grow it: Shadow (SMK-37 Elite) + Tape (FM-1)
+
+> These firmwares build on SLOOP: the SMK-37 Elite's buttons are the ones its HARDWARE CALIBRATION maps to SLOOP's FX, SEL, ENV, LFO, EDIT, GLO, HOME, SAVE, ARP, SEQ, PLAY, REC, OCT−/OCT+ (see `sloop/SMK37.md`); there is no SHIFT, so GLO is the modifier on both boards. Sounds are SLOOP's engines and presets (K1 engine, K2 preset on page 1). SEQ cycles the four pages; GLO + HOME held two seconds returns to plain SLOOP.
+
 
 Page 3 (press SEQ until the header reads SHADOW or TAPE). Everything from
 pages 1 and 2 still works on its own page; page 3 adds tracks that follow
@@ -46,7 +49,7 @@ velocity wobble of up to ±30.
   the selected send (REV/DLY) with its amount.
 * Hint line (yellow) and the notice bar.
 
-## SMK-37 Elite / Pro (Shadow)
+## SMK-37 Elite (Shadow)
 
 Pads:
 

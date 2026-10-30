@@ -1,81 +1,80 @@
 # How it works
 
-## One learn layer, two boards, four stages
+## One learn layer, two boards, four pages
 
-`overlay/app/learn/` is a small C module compiled into M-VAVE's official
-open firmware for the FM-1 (`vendor/fm1_open`) and the SMK-37 Elite / Pro
-(`vendor/smk37_open`). `tools/overlay.py` copies a vendor tree, adds the
-learn sources, generates `learn_config.h` (board + stage) and inserts five
-one-line hooks into the stock app:
+SLOOP is a single translation unit (`sloop/firmware/src/felucca.c` includes
+every source). The learn layer (`learn/learn.c`, which includes the rest of
+`learn/`) is included after SLOOP's DAW mode and works exactly like it: a
+*mode* that, while on, owns the keys, pads, buttons, knobs, faders, screen
+and lights, with plain SLOOP still inside (GLO + HOME held two seconds
+toggles). Everything is behind `FELUCCA_LEARN`; with it off the SLOOP build
+is byte-identical to upstream. The hooks, nine lines in six files, are listed
+in `sloop/firmware/src/LEARN-PATCH.md`:
 
-| Hook | File | What it does |
+| Hook | Where | What it does |
 | --- | --- | --- |
-| `learn_init()` | app/screen.c, `groove_screen_init` | sets up the beginner instrument (tracks, banks, live MIDI out) |
-| `learn_control()` | app/screen.c, `groove_screen_control` | runs the learn page instead of the stock UI while LEARN mode is on |
-| `learn_sysex()` | app/transfer.c, `fm1_app_sysex` | claims `F0 7D 'L' 'N'` frames, leaves the stock `F0 7D 'F' 'M'` protocol alone |
-| `learn_midi_observe()` | app/midi_router.c, `fm1_app_midi_received` | lets the tutor see notes arriving from the other box |
-| `learn_smk37_event()` / `learn_pad_color()` | app/smk37_controls.c (SMK only) | keys, pads, knobs, faders and pad colours |
+| `learn_switch`, `learn_input` | ui_input.c `ui_input()` | the GLO+HOME switch; in LEARN mode the buttons, knobs, faders and queued events go to the layer |
+| `learn_leds` | ui_input.c `ui_leds()` | button LEDs, key LEDs (FM-1), pad colours (SMK) |
+| `learn_screen` | ui_draw.c `ui_draw()` | the page is drawn as two 240x120 canvases on SLOOP's `cv_*` |
+| `learn_follow`, `learn_keys_block` | seq.c `keyboard_block()` (audio ISR) | the 27 keys' edges into a ring; the layer's sound requests into `input_on/off` |
+| `learn_ext_event` | seq.c `ext_keys_block()` (SMK) | the 16 pads and the ten outer keys into the same ring |
+| `learn_midi_in` | seq.c MIDI-in drain | notes from the other box, for the tutor |
+| `learn_sysex` | editor.c `ed_service()` | `F0 7D 'L' 'N'` frames, before the editor's own protocol |
 
-The CI safety audit (`tools/audit_safety.py`) diffs every assembled tree
-against the pinned vendor tree and fails if anything other than those
-lines, the version identity and the `app/learn` directory differ.
+## Contexts and safety
 
-The stock engine (sequencer, DX7/808/303/PSG/sampler, MIDI, Bluetooth,
-storage, the update loader) is untouched. On the device it is the vendor's
-binary SDK; in the browser workbench and in our host tests it is the
-vendor's C engine (`web/engine`). The learn layer drives it only through
-`app/instrument.h`.
+Two single-producer rings cross the audio ISR boundary (`learn/midi.c`):
+ISR → main carries key / pad / MIDI events; main → ISR carries sound
+requests (track, note, velocity) that the ISR turns into SLOOP's
+`input_on` / `input_off` and MIDI out. Nothing of the layer's logic runs in
+the ISR; nothing blocks; no allocation. The layer never writes Flash: the
+practice log, takes, sections and lessons are RAM / compiled in. SLOOP's own
+autosave of the project is unchanged.
+
+Sequencer data (steps, drum lanes, lengths, tempo, swing, mutes, levels) is
+written from the main loop into SLOOP's track structures, the way SLOOP's
+own editor does it.
+
+## The pages
+
+Each page is one file with the same entry points (init, control, draw, key,
+pad, encoder, fader, sysex, pad colour), dispatched by `learn/main.c`.
+Pages 2–4 share the loop model in `learn/song.c`, rendered into SLOOP's
+tracks: track 1 the melody (SLOOP's own live recorder), track 2 the chords
+(a chord per beat held by TIE steps), track 3 the bass the rule derives, the
+drum track the four lanes. Page 3's shadows render onto those same tracks
+(chords rules onto track 2, melody rules as notes added to the take's POLY
+steps, ghost hats onto the drum track). Page 4's sections snapshot the model
+and the melody steps.
 
 ## Pairing the two boxes
 
-Both boxes send live key output over USB and Bluetooth MIDI and listen on
-the same channels (track 1 = channel 1, ... drums = channel 10). The learn
-layer adds a SysEx vocabulary (`learn_sysex.c`) for everything that is not
-a note: key change, follow-me, hints, drill state, scores, the practice
-log, section queueing. Frames are `F0 7D 'L' 'N' 01 <device> <stage> <cmd>
-... F7`; the stage byte lets a Stage 2 Pulse talk to a Stage 3 Tape.
-
-Neither box can host the other over USB (both are USB devices). Use a
-phone or tablet with a USB-C hub and a MIDI router app (AUM or MIDI Flow on
-iOS, MIDI Hub on Android), a small USB MIDI host box (CME H2MIDI Pro or
-similar), or Bluetooth MIDI for the stages where timing is not critical.
-
-## Stages
-
-Stage N firmware compiles pages 1..N; SEQ cycles pages. Each page is one
-file (`learn_stageN.c`) with the same eight entry points (init, control,
-draw, key, pad, encoder, fader, sysex, pad colour). Stages 2-4 share the
-song model in `learn_song.c`, which renders chords, a derived bass and drum
-lanes into engine tracks so the engine does the playing.
+Both boxes send their keys over USB MIDI (the SMK-37 also over its TRS MIDI
+OUT) and the layer adds a SysEx vocabulary (`learn/sysex.c`) for everything
+that is not a note: key change, follow-me, hints, drill state, scores, the
+practice log, the loop's grid and chords, section queueing. Frames are
+`F0 7D 'L' 'N' 01 <device> <page> <cmd> ... F7`. Neither box can host the
+other over USB (both are USB devices): use a phone or tablet with a hub and
+a MIDI router app, a small USB MIDI host box, or the SMK-37's TRS out into
+the FM-1's TRS in for the one-way case.
 
 ## Lessons and the practice log
 
-Lessons are JSON in `lessons/`, compiled into the firmware by
-`tools/make_lessons.py` (also emitting `.syx` selector files). The practice
-log and unlocks live in RAM; `LCMD_LOGDUMP` exports them. No Flash is
-written by the learn layer in this version.
+Lessons are JSON in `lessons/`, compiled in by `lessons/make_lessons.py`
+(`learn/lessons.c`, plus `.syx` selector files). The practice log and the
+unlock bits live in RAM; `LCMD_LOGDUMP` exports them. Page graduations are
+guidance (a notice names the next page); nothing is locked.
 
-## Building
+## Building and testing
 
-* Host (any OS with clang/gcc): `tools/overlay.py --board smk37 --stage 1`
-  then `tools/host_build.sh build/trees/smk37-s1`. This links the learn
-  layer against the vendor browser engine and runs the simulator tests.
-* Device: the vendor's `sdk/Build.ps1`, run under `pwsh` on Ubuntu with
-  JieLi's Linux toolchain, the way the Felucca-family FM-1 firmwares build
-  this chip in their CI (`tools/get_toolchain.sh` there; `jieli-linux-
-  toolchains-*`, clang 4.0.1 for pi32v2, a plain tarball). Differences from
-  the Windows kit the vendor script expects, all handled by
-  `tools/overlay.py --host-os linux` on the assembled copy and allowed by
-  the safety audit: tool names (`pi32v2/bin/ld`, `common/bin/objcopy`)
-  reached through a shim `bin/`; the gold LTO plugin is `common/bin/LLVMgold.so`,
-  so the vendor's LTO compile and link recipe is kept verbatim; the Windows-binary hash loop becomes a presence check,
-  with the tarball pinned by SHA-256 in `tools/ci/jieli-linux.sha256` and
-  the compiler version verified; Build.ps1's hash of itself is skipped
-  (every other SDK file is still verified); three `\` path assumptions use
-  the platform separator. All vendor post-link checks (SRAM placement,
-  heap, callbacks, sections) and the C# packager run unchanged.
-  See `.github/workflows/firmware.yml`.
-  The vendor's embedded-installer HTML build is Windows-only, so releases
-  ship `.fwsc` packages for M-VAVE's hosted workbench instead. On a Windows
-  PC with the JieLi 2.5.3 kit, the unpatched vendor build (`build.bat`)
-  works on any assembled tree too.
+* Host: `tools/host_tests.sh` compiles the layer into SLOOP's own UI harness
+  (`sloop/tests/ui_pages_test.c`, gcc) for every page and drives it: the
+  switch, keys through both rings into the synth, drills, lessons, the loop
+  on the tracks, shadows, takes, sections; the screens come out as PPM.
+* Device: SLOOP's `tools/build.py` with JieLi's Linux toolchain
+  (`tools/ci_deps.sh`, pinned by SHA-256). `FELUCCA_LEARN=1` adds the layer
+  and selects the smaller sample set (`FELUCCA_SAMPLE_SETS`), ~100 KB of
+  flash the pages need. CI builds plain SLOOP and the learn firmware for
+  both boards, reports the image size, the biggest symbols and any build
+  error as annotations, and on a `vX.Y` tag publishes the install site and
+  a release (`tools/make_site.py`, SLOOP's web installer per device).

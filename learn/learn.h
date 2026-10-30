@@ -20,7 +20,7 @@
 #define LEARN_H
 
 #ifndef LEARN_STAGE
-#define LEARN_STAGE 1
+#define LEARN_STAGE 4            /* the pages built in: all four (a lower number: a cut-down development build) */
 #endif
 #if LEARN_STAGE < 1 || LEARN_STAGE > 4
 #error "LEARN_STAGE must be 1..4"

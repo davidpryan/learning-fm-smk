@@ -1,8 +1,8 @@
 # Specification (player-facing design, stages 2-4 and shared rules)
 
-Stage 1 is implemented in `overlay/app/learn/learn_stage1.c`; read it as the
-reference for style, layout and the teaching layer. This file carries the
-design for the remaining stages. Hardware note: the SMK-37 Pro has **16**
+This is the player-facing design the pages were written from (the code is
+`learn/stage1..4.c`; the control references as built are `docs/stage1..4.md`,
+which win where the two differ). Hardware note: the SMK-37 Elite has **16**
 pads; where the design says pads 17/18, use buttons (REC = replay A/B,
 PLAY = transport, SAVE = secondary function) and say so in `docs/stageN.md`.
 

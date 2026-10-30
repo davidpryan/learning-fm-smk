@@ -1,4 +1,7 @@
-# Stage 4 — Finish it: Stage (SMK-37 Elite / Pro) + Scribe (FM-1)
+# Page 4 — Finish it: Stage (SMK-37 Elite) + Scribe (FM-1)
+
+> These firmwares build on SLOOP: the SMK-37 Elite's buttons are the ones its HARDWARE CALIBRATION maps to SLOOP's FX, SEL, ENV, LFO, EDIT, GLO, HOME, SAVE, ARP, SEQ, PLAY, REC, OCT−/OCT+ (see `sloop/SMK37.md`); there is no SHIFT, so GLO is the modifier on both boards. Sounds are SLOOP's engines and presets (K1 engine, K2 preset on page 1). SEQ cycles the four pages; GLO + HOME held two seconds returns to plain SLOOP.
+
 
 Page 4 (press SEQ until the header reads STAGE or SCRIBE). The loop you built
 on pages 2 and 3 becomes a *section*; eight sections, queued with the hands,
@@ -26,14 +29,14 @@ when the loop wraps (or at the next beat for a double-tap), so the music
 never stutters. Recall copies the model back, re-renders drums, chords and
 bass, restores the melody cells, tempo, swing and energy, and sets the key.
 
-## Stage (SMK-37 Elite / Pro)
+## Stage (SMK-37 Elite)
 
 | Control | Action |
 | --- | --- |
 | Pads 1-8 | Queue slot 1-8: **tap** = at the next loop, **double-tap** = at the next beat, **hold** (over 0.6 s) = play while held, return to the previous section at the loop after release |
 | Pad 1-8 held 2 s | Why-hint: type, energy, bar count and the first four chords |
-| SHIFT + pads 9-16 | Store the current loop into slot 1-8 with the STORE AS type |
-| Pads 9-16 (no SHIFT) | Cycle the type of an occupied slot 1-8 |
+| GLO + pads 9-16 | Store the current loop into slot 1-8 with the STORE AS type |
+| Pads 9-16 (no GLO) | Cycle the type of an occupied slot 1-8 |
 | SCL | Cycle the STORE AS type |
 | SAVE | Store into the cursor slot (the last slot stored or played) |
 | PLAY | Start / stop the loop |
@@ -143,7 +146,7 @@ its big line.
 * **16 pads, not 18.** The spec's overflow functions moved to buttons: SAVE
   stores into the cursor slot, REC is both song record and replay A/B, PLAY
   is transport, ENV steps the transition.
-* **Store from pads 9-16 needs SHIFT**; without SHIFT those pads cycle the
+* **Store from pads 9-16 needs GLO**; without GLO those pads cycle the
   slot's type instead (the spec puts type cycling on SCL, which also works).
 * **Sections hold the melody track only** (the spec says "the tracks'
   cells"). Shadows are re-rendered by Stage 3 from the restored model, and

@@ -1,4 +1,7 @@
-# Stage 2 — Pulse (SMK-37 Elite / Pro) / Root (FM-1)
+# Page 2 — Pulse (SMK-37 Elite) / Root (FM-1)
+
+> These firmwares build on SLOOP: the SMK-37 Elite's buttons are the ones its HARDWARE CALIBRATION maps to SLOOP's FX, SEL, ENV, LFO, EDIT, GLO, HOME, SAVE, ARP, SEQ, PLAY, REC, OCT−/OCT+ (see `sloop/SMK37.md`); there is no SHIFT, so GLO is the modifier on both boards. Sounds are SLOOP's engines and presets (K1 engine, K2 preset on page 1). SEQ cycles the four pages; GLO + HOME held two seconds returns to plain SLOOP.
+
 
 Page 2 (press SEQ once from page 1) is the loop: four drum lanes, a chord
 per beat, a generated bass line and the engine's melody recorder. Both
@@ -12,11 +15,11 @@ engine, the four chord cells of the bar in view (Roman numerals), a status
 line (pad/key mode, bass rule, recorder state), prompt, trainer stats, lesson
 line, why-hint line and the notice bar. The play head is the brighter cell.
 
-## SMK-37 Elite / Pro (Pulse)
+## SMK-37 Elite (Pulse)
 
 | Control | Plain | With EDIT held |
 |---|---|---|
-| Pads (GRID mode) | 16 steps of the selected lane; tap toggles (sets *manual*). SHIFT + pad 1-4 selects Kick / Snare / Hat / Perc | |
+| Pads (GRID mode) | 16 steps of the selected lane; tap toggles (sets *manual*). GLO + pad 1-4 selects Kick / Snare / Hat / Perc | |
 | Pads (CHORDS mode) | 1-7 triads of degree I-VII, 9-15 sevenths, 8 and 16 = rest. A tap writes that beat of the loop while it runs or while REC is armed | |
 | FX | Pads GRID <-> CHORDS | |
 | SCL | Next lane (Kick, Snare, Hat, Perc) | |
@@ -103,7 +106,7 @@ REPLAY which · PATH follow-me · SLOW percent.
 * **16 pads, not 18.** The spec's pad 17/18 functions sit on buttons: REC
   = replay A/B, PLAY = transport, SAVE = lane re-roll (REC + SAVE = undo).
 * **One pad set, two modes.** The SMK pads are either the 16-step grid or
-  the chord palette; FX switches. Lane select is SHIFT + pad 1-4 or SCL.
+  the chord palette; FX switches. Lane select is GLO + pad 1-4 or SCL.
 * **Second knob row on EDIT.** Spec knobs K1-K7 are Hits, Shift, Swing,
   Fill, Decay, Tempo, Quantise, but Root also needs bass rule, bars, slow,
   lesson and patch. Plain K5 is the bass rule and Decay moved to EDIT + K5;
