@@ -53,6 +53,7 @@ jobs:
           key: jieli-2.5.3-${{ runner.os }}
       - name: Install JieLi toolchain
         if: steps.cache.outputs.cache-hit != 'true'
+        timeout-minutes: 8
         shell: pwsh
         env:
           JIELI_TOOLCHAIN_ZIP_URL: ${{ secrets.JIELI_TOOLCHAIN_ZIP_URL }}

@@ -47,7 +47,12 @@ if ($env:JIELI_INSTALLER_SHA256 -and $env:JIELI_INSTALLER_SHA256.ToLowerInvarian
 }
 foreach ($args in @(@('/S', "/D=C:\JL"), @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/DIR=C:\JL'), @('/quiet'))) {
     Write-Host "toolchain: trying installer switches $($args -join ' ')"
-    try { $p = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -NoNewWindow; Write-Host "exit $($p.ExitCode)" } catch { Write-Host "failed: $_" }
+    try {
+        $p = Start-Process -FilePath $installer -ArgumentList $args -PassThru -NoNewWindow
+        # A GUI installer that ignores the switch waits forever for a click. Give it two minutes, then kill it.
+        if (!$p.WaitForExit(120000)) { Write-Host 'installer did not finish in 120 s (probably showing a window): killing it'; $p.Kill() }
+        else { Write-Host "exit $($p.ExitCode)" }
+    } catch { Write-Host "failed: $_" }
     if (Test-Path -LiteralPath $clang) { Done }
     $alt = Get-ChildItem -Path 'C:\JL' -Recurse -Filter clang.exe -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($alt) { $dir = Split-Path -Parent (Split-Path -Parent $alt.FullName); Write-Host "toolchain: found at $dir"; Write-Output "FM1_PI32_TOOLCHAIN=$dir" >> $env:GITHUB_ENV; exit 0 }
