@@ -23,7 +23,8 @@ FORBIDDEN = [
 ]
 ALLOWED_DIFF = {"app/screen.c", "app/transfer.c", "app/midi_router.c", "app/smk37_controls.c", "app/version.h", "sdk/Build.ps1"}
 # The Linux build patch may only touch these things in sdk/Build.ps1.
-BUILD_PS1_ALLOWED = re.compile(r"clang|llvm-nm|llvm-objcopy|pi32v2-ld|LLVMgold|external_toolchain|Linux toolchain|Test-Path|required|\}|\{|^\s*$|pi32_compiler_sha256|JieLi")
+BUILD_PS1_ALLOWED = re.compile(r"clang|llvm-nm|llvm-objcopy|pi32v2-ld|LLVMgold|external_toolchain|Linux toolchain|Test-Path|required|\}|\{|^\s*$|pi32_compiler_sha256|JieLi"
+                               r"|plugin-opt|'-flto'|sdk\.elf|DirectorySeparatorChar|StartsWith|Replace\(|SDK payload changed")
 
 def scan_learn():
     bad = 0
@@ -92,7 +93,8 @@ def diff_tree(board, stage, tree=None):
         elif rel == "sdk/Build.ps1":
             # Removed lines may also be the two bookkeeping lines of the replaced Windows hash loop.
             extra_removed = {"        $name = $entry.Name", "        $file = Join-Path $Toolchain $name"}
-            ok = (os.path.isfile(os.path.join(tree, "LINUX-BUILD-PATCH.txt")) and all(BUILD_PS1_ALLOWED.search(l) for l in added)
+            extra_added = {"    '-Wno-invalid-noreturn','-fno-common','-fallow-pointer-null','-fprefer-gnu-section',", "        '--sort-common',", "        '--start-group',"}
+            ok = (os.path.isfile(os.path.join(tree, "LINUX-BUILD-PATCH.txt")) and all(BUILD_PS1_ALLOWED.search(l) or l in extra_added for l in added)
                   and all(BUILD_PS1_ALLOWED.search(l) or l in extra_removed for l in removed))
         else:
             ok = not removed and all(("learn_" in l and "extern" in l) for l in added)

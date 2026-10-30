@@ -58,40 +58,68 @@ def replace_once(path, pattern, repl):
 
 def patch_build_for_linux(out):
     """Let the vendor Build.ps1 run under pwsh on Linux with JieLi's Linux
-    toolchain (the same clang 4.0.1 for pi32v2, published as a tarball).
-    Only tool file names and the Windows-binary hash check change; every
-    SDK-file hash check, the ELF/SRAM/heap checks and the packager stay.
-    The toolchain's own hashes are checked against tools/ci/jieli-linux.sha256
-    by the workflow before this script runs."""
+    toolchain (jieli-linux-toolchains-*, the same clang 4.0.1 for pi32v2).
+    Following the Felucca-family firmwares, which build this chip on Ubuntu:
+      * tools are reached through a shim bin/ (tools/ci/get_linux_toolchain.sh
+        makes it: clang, pi32v2-ld -> pi32v2/bin/ld, llvm-objcopy -> common/bin/objcopy ...);
+      * the Windows gold LTO plugin (LLVMgold.dll) does not exist on Linux, so
+        -flto is dropped and the link has no --plugin options. The vendor
+        recipe already builds its UI and board units without LTO; the rest
+        only loses cross-unit inlining. All vendor post-link checks
+        (Test-Firmware: SRAM placement, heap, callbacks, sections) stay on;
+      * the Windows-binary hash loop becomes a presence check: the tarball is
+        pinned by SHA-256 in CI and the compiler version is verified there;
+      * three '\\' path assumptions use the platform separator.
+    Nothing else in Build.ps1 changes; the C# packager runs under pwsh."""
+    import re as _re
     bp = os.path.join(out, "sdk", "Build.ps1")
     src = _read(bp)
     nl = "\r\n" if "\r\n" in src else "\n"
-    reps = [
-        ("'clang.exe'", "'clang'"), ("'llvm-nm.exe'", "'llvm-nm'"), ("'llvm-objcopy.exe'", "'llvm-objcopy'"),
-        ("'pi32v2-ld.exe'", "'pi32v2-ld'"), ("'LLVMgold.dll'", "'LLVMgold.so'"),
-    ]
-    for a, b in reps:
-        if a not in src:
-            sys.exit(f"overlay: linux patch anchor missing in Build.ps1: {a}")
-        src = src.replace(a, b)
-    # The external-toolchain block hashes the Windows binaries; replace that one
-    # block with a presence check (the workflow verified the tarball's hashes).
+    def must(pattern, repl, count=None, regex=False):
+        nonlocal src
+        if regex:
+            new, n = _re.subn(pattern, repl, src)
+        else:
+            n = src.count(pattern); new = src.replace(pattern, repl)
+        if n == 0 or (count is not None and n != count):
+            sys.exit(f"overlay: linux patch anchor found {n}x in Build.ps1: {pattern!r}")
+        src = new
+    # 1. tool names
+    for a, b in (("'clang.exe'", "'clang'"), ("'llvm-nm.exe'", "'llvm-nm'"), ("'llvm-objcopy.exe'", "'llvm-objcopy'"),
+                 ("'pi32v2-ld.exe'", "'pi32v2-ld'")):
+        must(a, b)
+    must("containing bin/clang.exe", "containing bin/clang")
+    # 2. no LTO
+    must("'-fno-common','-flto','-fallow-pointer-null'", "'-fno-common','-fallow-pointer-null'", 1)
+    must(r"\$link = @\('--plugin',\(Join-Path \$bin 'LLVMgold\.dll'\),'-o','sdk\.elf'\)", "$link = @('-o','sdk.elf')", 1, regex=True)
+    must(r"'--plugin-opt=[^']*',?", "", None, regex=True)
+    must(r"\(\s*'-flto',", "(", 1, regex=True)
+    # 3. toolchain check
     start = src.find("if ($manifest.external_toolchain) {")
     end = src.find("$synth = Get-Content", start)
     if start < 0 or end < 0:
         sys.exit("overlay: linux patch: external_toolchain block not found")
     block = ("if ($manifest.external_toolchain) {" + nl +
-             "    foreach ($required in @('bin/clang','bin/pi32v2-ld','bin/LLVMgold.so','bin/llvm-nm','bin/llvm-objcopy')) {" + nl +
+             "    foreach ($required in @('bin/clang','bin/pi32v2-ld','bin/llvm-nm','bin/llvm-objcopy')) {" + nl +
              "        if (!(Test-Path -LiteralPath (Join-Path $Toolchain $required))) { throw \"Linux toolchain is missing $required\" }" + nl +
              "    }" + nl + "}" + nl)
     src = src[:start] + block + src[end:]
-    # synth.json pins the Windows clang hash; on Linux the matching compiler is the tarball verified by CI.
-    src = src.replace("$synth.pi32_compiler_sha256 -cne $manifest.external_toolchain.files.'bin/clang' -or" + nl, "")
-    # Install location message.
-    src = src.replace("throw 'Install JieLi Windows toolchain 2.5.3", "throw 'Install the JieLi Linux toolchain")
+    src = _re.sub(r"[ \t]*\$synth\.pi32_compiler_sha256 -cne [^\r\n]*\r?\n", "", src)  # SMK script only
+    must("throw 'Install JieLi Windows toolchain 2.5.3", "throw 'Install the JieLi Linux toolchain")
+    # 4. path separators
+    must("StartsWith($root + '\\build\\', [StringComparison]::OrdinalIgnoreCase)",
+         "StartsWith((Join-Path $root 'build') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)", 1)
+    must("$full.StartsWith($sdk + '\\', [StringComparison]::OrdinalIgnoreCase)",
+         "$full.StartsWith($sdk + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)", 1)
+    # 5. The manifest hashes Build.ps1 itself; this patched copy cannot match it.
+    #    Every other SDK file (headers, libraries, packer tools, stock packages) is still verified.
+    must("(Hash $full) -ne $file.Value) { throw \"SDK payload changed: $($file.Name)\" }",
+         "($file.Name -ne 'sdk/Build.ps1' -and (Hash $full) -ne $file.Value)) { throw \"SDK payload changed: $($file.Name)\" }", 1)
+    must("(Join-Path $root 'app/synth'))+'\\')", "(Join-Path $root 'app/synth'))+[IO.Path]::DirectorySeparatorChar)", 1)
+    must(".Replace('\\','/')", ".Replace([string][IO.Path]::DirectorySeparatorChar,'/')")
     _write(bp, src)
     with open(os.path.join(out, "LINUX-BUILD-PATCH.txt"), "w", encoding="utf-8") as fh:
-        fh.write("sdk/Build.ps1 patched for Linux: tool names without .exe, LLVMgold.so, toolchain presence check instead of Windows binary hashes.\n")
+        fh.write("sdk/Build.ps1 patched for Linux: tool names via shim bin/, no LTO plugin, toolchain presence check instead of Windows binary hashes, platform path separators, the manifest self-hash of Build.ps1 skipped (all other SDK files still verified).\n")
 
 def assemble(board, stage, out, model="elite", host_os="windows"):
     b = BOARDS[board]

@@ -61,12 +61,22 @@ written by the learn layer in this version.
   then `tools/host_build.sh build/trees/smk37-s1`. This links the learn
   layer against the vendor browser engine and runs the simulator tests.
 * Device: the vendor's `sdk/Build.ps1`, run under `pwsh` on Ubuntu with
-  JieLi's Linux toolchain (the same clang 4.0.1 for pi32v2 the Windows kit
-  ships, published as a tarball). `tools/overlay.py --host-os linux`
-  changes only tool file names in the assembled copy of Build.ps1 and
-  swaps the Windows-binary hash check for a presence check; the toolchain
-  tarball itself is pinned by SHA-256 in `tools/ci/jieli-linux.sha256` and
-  every SDK-file hash check stays on. See `.github/workflows/firmware.yml`.
+  JieLi's Linux toolchain, the way the Felucca-family FM-1 firmwares build
+  this chip in their CI (`tools/get_toolchain.sh` there; `jieli-linux-
+  toolchains-*`, clang 4.0.1 for pi32v2, a plain tarball). Differences from
+  the Windows kit the vendor script expects, all handled by
+  `tools/overlay.py --host-os linux` on the assembled copy and allowed by
+  the safety audit: tool names (`pi32v2/bin/ld`, `common/bin/objcopy`)
+  reached through a shim `bin/`; no gold LTO plugin on Linux, so `-flto`
+  and the `--plugin-opt` link options are dropped (the vendor recipe already
+  builds its UI and board units without LTO; the rest loses cross-unit
+  inlining only); the Windows-binary hash loop becomes a presence check,
+  with the tarball pinned by SHA-256 in `tools/ci/jieli-linux.sha256` and
+  the compiler version verified; Build.ps1's hash of itself is skipped
+  (every other SDK file is still verified); three `\` path assumptions use
+  the platform separator. All vendor post-link checks (SRAM placement,
+  heap, callbacks, sections) and the C# packager run unchanged.
+  See `.github/workflows/firmware.yml`.
   The vendor's embedded-installer HTML build is Windows-only, so releases
   ship `.fwsc` packages for M-VAVE's hosted workbench instead. On a Windows
   PC with the JieLi 2.5.3 kit, the unpatched vendor build (`build.bat`)
