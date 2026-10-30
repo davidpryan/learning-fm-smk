@@ -364,10 +364,10 @@ static void s2_encoder_plain(struct lctx *x, unsigned id, int delta)
     case 0: { int v = (int)ln->hits + delta; ln->hits = (uint8_t)(v < 1 ? 1 : v > 16 ? 16 : v); s2_set_big("HITS", ln->hits, 1); lane_regen(x, s2_lane); } break;
     case 1: { int v = (int)ln->shift + delta; ln->shift = (uint8_t)((v % 16 + 16) % 16); s2_set_big("SHIFT", ln->shift, 1); lane_regen(x, s2_lane); } break;
     case 2:
-        if (!log_unlocked(UNLOCK_SWING)) { learn_notice("LOCKED: PASS THE TRAINER FIRST", 1500); break; }
+        if (!log_unlocked(UNLOCK_SWING)) { learn_notice("LOCKED: PASS THE TRAINER", 1500); break; }
         song_set_swing((unsigned)((int)lsong.swing + delta < 50 ? 50 : (int)lsong.swing + delta)); s2_set_big("SWING", lsong.swing, 1); break;
     case 3:
-        if (!log_unlocked(UNLOCK_FILL)) { learn_notice("LOCKED: PASS THE TRAINER FIRST", 1500); break; }
+        if (!log_unlocked(UNLOCK_FILL)) { learn_notice("LOCKED: PASS THE TRAINER", 1500); break; }
         { static const uint8_t opts[4] = {0, 2, 4, 8}; unsigned i = 0; while (i < 3u && opts[i] != lsong.fill_every) i++; i = (i + 4u + (delta > 0 ? 1u : 3u)) % 4u; lsong.fill_every = opts[i]; }
         s2_set_big("FILL", lsong.fill_every, lsong.fill_every != 0u); song_write_drums(); break;
     case 4: lsong.bass_rule = (lsong.bass_rule + BASS_RULES + (delta > 0 ? 1u : BASS_RULES - 1u)) % BASS_RULES; song_write_bass(); s2_set_big(RULE_NM[lsong.bass_rule], 0, 0); break;
@@ -670,7 +670,7 @@ static void stage2_draw(struct lctx *x)
     else if (tr.state == TS_SCORING) ls_cat(line, 0, sizeof line, tr.round ? "TAP THE PATTERN" : "TAP ON THE BEAT");
     else if (tr.state == TS_RESULT) ls_cat(line, 0, sizeof line, "ROUND DONE");
     else if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
-    else { ls_cat(line, 0, sizeof line, LEARN_PADS ? LBL_PLAY ": LOOP  PADS: STEPS" : LBL_PLAY ": LOOP  " LBL_GLO "+KEY: STEP"); }
+    else { ls_cat(line, 0, sizeof line, LEARN_PADS ? LBL_PLAY ": LOOP  PADS: STEPS" : LBL_PLAY ": LOOP " LBL_GLO "+KEY: STEP"); }
     ld_text(4, 176, line, 0, tr.state == TS_SCORING ? LC_GREEN : LC_AMBER);
     if (tr.state == TS_IDLE && !ls) ld_text(4, 194, LBL_ENV ": RHYTHM TRAINER", 0, LC_DIM);
     /* the trainer's stats, or what is locked */

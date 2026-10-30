@@ -718,7 +718,7 @@ static void stage3_draw(struct lctx *x)
         if (lvl) ld_fill(198, y + 2, (int)lvl, 8, (s3_solo >> t) & 1u ? LC_YELLOW : LC_GREEN);
     }
     line[0] = 0;
-    if (s3_recording()) ls_cat(line, 0, sizeof line, s3_punch_on ? "PUNCH: LET GO OF " LBL_REC " TO END" : "TAPING: " LBL_PLAY " TO FINISH");
+    if (s3_recording()) ls_cat(line, 0, sizeof line, s3_punch_on ? "PUNCH: RELEASE " LBL_REC " TO END" : "TAPING: " LBL_PLAY " TO FINISH");
     else if (s3_punch_armed) ls_cat(line, 0, sizeof line, "PUNCH WAITS FOR THE BAR");
     else if (s3_arp_entry) ls_cat(line, 0, sizeof line, LEARN_PADS ? "TAP PATTERN ON PADS 9-16" : "GLO+KEYS 9-16: THE PATTERN");
     else if (s3_demo_phase) ls_cat(line, 0, sizeof line, s3_demo_phase == 1u ? "LISTEN: SOURCE ALONE" : "LISTEN: SHADOW ALONE");
