@@ -27,8 +27,8 @@ Releases (`vX.Y` tags) publish an install site with **one installer page per
 device** and the packages with SHA-256 sidecars. Each installer checks the
 model and refuses the other device's package. Back to stock: M-VAVE's own
 updater with the official package (the FM-1 page has a button for it).
-Details and the order of operations: `docs/SAFETY.md`; if something goes
-wrong: `docs/RECOVERY.md`.
+Details and the order of operations: `docs/SAFETY.md`; the first run on a
+device: `docs/FIRST-HARDWARE-TEST.md`; if something goes wrong: `docs/RECOVERY.md`.
 
 Packages: `sloop-smk37-elite-learn.fwsc` (identity `SMK-37 Elite_9xy`) and
 `felucca-learn.fwsc` (identity `FM-1_9xy`).
