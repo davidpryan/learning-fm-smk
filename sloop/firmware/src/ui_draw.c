@@ -1020,6 +1020,13 @@ UI_SMALL static void ui_draw(void)
         return;
     }
 #endif
+#if FELUCCA_LEARN
+    if (learn_screen()) {                               /* LEARN mode, its screen (learn/learn.c) */
+        ui_timers();
+        ui.force = 0;
+        return;
+    }
+#endif
     if (rec_go) {                                       /* the take started: say so */
         rec_go = 0;
         ui_message("RECORDING");

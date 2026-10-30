@@ -13,7 +13,34 @@ on:
 permissions:
   contents: read
 jobs:
+  host-tests:
+    # the learn layer on SLOOP's host UI harness (gcc, no toolchain): the switch, keys, drills, lessons, screens
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python deps (SLOOP's generators need Pillow with raqm)
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libraqm0 libfribidi0 libharfbuzz0b > /dev/null
+          python3 -m pip install -q Pillow fonttools
+      - name: Generated tables
+        working-directory: sloop
+        run: python3 tools/build.py --help > /dev/null && python3 -c "import sys; sys.path.insert(0,'tools'); import build; build.generate()"
+      - name: Lessons
+        run: python3 lessons/make_lessons.py && git diff --exit-code -- learn/lessons.c
+      - name: Learn UI tests
+        run: tools/host_tests.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: learn-host-screens
+          path: build/host/*.ppm
   build:
+    needs: host-tests
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     strategy:
@@ -22,6 +49,8 @@ jobs:
         include:
           - { name: sloop-baseline-elite, board: smk37, model: elite, learn: 0, stage: 0 }
           - { name: sloop-baseline-fm1,   board: fm1,   model: "",    learn: 0, stage: 0 }
+          - { name: learn-s1-elite,       board: smk37, model: elite, learn: 1, stage: 1 }
+          - { name: learn-s1-fm1,         board: fm1,   model: "",    learn: 1, stage: 1 }
     steps:
       - uses: actions/checkout@v4
         with:

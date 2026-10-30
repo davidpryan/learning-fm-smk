@@ -193,10 +193,13 @@ def build_app():
     flags = [*CFLAGS, *BOARD_DEFS[BOARD], "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_CDC", "FELUCCA_UART",
                  "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_CDC_ON", "FELUCCA_DATA_UNTAGGED_OK",
-                 "FELUCCA_CPU1", "FELUCCA_LOGO_TEXT"):
+                 "FELUCCA_CPU1", "FELUCCA_LOGO_TEXT", "FELUCCA_LEARN"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
+    st = os.environ.get("LEARN_STAGE")          # the learn layer's stage (learn/learn.c), with FELUCCA_LEARN=1
+    if st in ("1", "2", "3", "4"):
+        flags.append(f"-DLEARN_STAGE={st}")
     flags.append(f'-DFELUCCA_ID="{PRODUCT}"')
     fam = os.environ.get("FELUCCA_DATA_FAMILY")   # SMK store owner (storage.c): a ported firmware's own family
     if fam:
@@ -361,6 +364,8 @@ def main():
         PRODUCT = PRODUCT.replace(MODELS["pro"], MODELS[model])
         BOARD_PREFIX[BOARD] = BOARD_PREFIX[BOARD].replace(MODELS["pro"], MODELS[model])
         stem += "-" + model
+    if os.environ.get("FELUCCA_LEARN") == "1":   # the learn layer (learn/learn.c): its own package name, by stage
+        stem += "-learn-s" + (os.environ.get("LEARN_STAGE") or "1")
     name = f"{stem}.fwsc"
     if a.release:                   # one digit each: the identity has room for two
         m = re.fullmatch(r"(\d)\.(\d)(-[A-Za-z0-9]+)?", a.release)

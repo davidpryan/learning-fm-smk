@@ -1205,7 +1205,16 @@ UI_SMALL static void ed_service(void)
     const uint8_t *p;
     uint32_t n;
     ed_sync();                                             /* v2 pushes (while watched) */
-    if (!ota_frame_get(&p, &n) || n < 4u || p[0] != ED_HDR0 || p[1] != ED_HDR1 || p[2] != ED_HDR2)
+    if (!ota_frame_get(&p, &n) || n < 4u)
+        return;
+#if FELUCCA_LEARN
+    if (p[0] == 0x7Du && p[1] == 'L' && p[2] == 'N') {     /* the learn layer's SysEx (learn/learn.c) */
+        learn_sysex(p, n);
+        ota_frame_done();
+        return;
+    }
+#endif
+    if (p[0] != ED_HDR0 || p[1] != ED_HDR1 || p[2] != ED_HDR2)
         return;
     ed_w.last_ms = fm1_ms;                                 /* any request keeps WATCH alive */
     if (p[3] >= ED_SMP_BEGIN) {                            /* large frames: handled in place, then freed */

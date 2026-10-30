@@ -39,6 +39,12 @@
 #include "voice.c"
 #include "slicer.c"          /* per-track SLICER insert, used by fx.c */
 #include "fx.c"
+#ifndef FELUCCA_LEARN
+#define FELUCCA_LEARN 0          /* the learn layer (learn/learn.c): a beginner's teaching mode, LEARN_STAGE 1..4 */
+#endif
+#if FELUCCA_LEARN
+#include "../../../learn/pre.h"  /* its entry points, for seq.c and the UI below */
+#endif
 #ifndef FELUCCA_OTA
 #define FELUCCA_OTA 1            /* M-UPGRADE update entry; needs FELUCCA_FLASH */
 #endif
@@ -113,6 +119,9 @@
 #if BOARD_SMK37
 #include "ui_fbank.c"         /* SMK-37 Pro: the FADER BANK screen */
 #include "ui_daw.c"           /* SMK-37: DAW mode: its input, screens, lights and map editor */
+#endif
+#if FELUCCA_LEARN
+#include "../../../learn/learn.c"   /* the learn layer: LEARN mode (as DAW mode: its input, screen, lights) */
 #endif
 #ifndef FELUCCA_FLASH
 #define FELUCCA_FLASH 1          /* flash driver + storage.c */

@@ -261,6 +261,14 @@ UI_SMALL static void ui_leds(void)
         daw_leds();
         return;
     }
+#endif
+#if FELUCCA_LEARN
+    if (learn_on) {                                /* LEARN mode: its lights (learn/learn.c) */
+        learn_leds();
+        return;
+    }
+#endif
+#if BOARD_SMK37
     smk_pad_daw = 0;
 #endif
     led_put(nl, panel.btn[ui.layer != LY_PLAY ? LAYER_BTN[ui.layer] : cur_btn()],
@@ -1165,6 +1173,15 @@ UI_SMALL static void ui_input(void)
         daw_input(pressed, now);
         return;
     }
+#endif
+#if FELUCCA_LEARN
+    learn_switch(&pressed);                                       /* LEARN mode (learn/learn.c): the teaching pages */
+    if (learn_on) {
+        learn_input(pressed, now);
+        return;
+    }
+#endif
+#if BOARD_SMK37
     if (pressed & (1u << SMK_BTN_LEFT | 1u << SMK_BTN_RIGHT)) {   /* < >: SEQ held: the step pages; the visualiser:
                                                                 * its style; else the pages, as SELECT (never the tempo) */
         int32_t d = (pressed >> SMK_BTN_RIGHT) & 1u ? 1 : -1;

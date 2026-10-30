@@ -2185,6 +2185,12 @@ static void ext_keys_block(void)
     while ((e = smk_extkey_take()) >= 0) {
         uint32_t k = (uint32_t)e >> 8, v = vel_apply(vel_mode, (uint32_t)e & 0xFFu), sel = song.sel % NTRK, mc;
         track_t *t = &trk[sel];
+#if FELUCCA_LEARN
+        if (learn_isr) {                                  /* LEARN mode: pads and outer keys to the learn queue */
+            learn_ext_event(k, v);
+            continue;
+        }
+#endif
         if (k >= SMK_EXT_DAW) {                           /* DAW mode: a pad */
             if (k - SMK_EXT_DAW < SMK_NPAD)
                 daw_pad(k - SMK_EXT_DAW, v);
@@ -2281,6 +2287,13 @@ static void keyboard_block(void)
     pick_aud_block();
     if (daw_isr) {
         daw_keys_block();
+        return;
+    }
+#endif
+#if FELUCCA_LEARN
+    learn_follow();                                   /* (LEARN mode: the keys go to the learn layer's queue) */
+    if (learn_isr) {
+        learn_keys_block();
         return;
     }
 #endif
@@ -3276,6 +3289,10 @@ static void events_block(uint32_t n)
             mclk_event((pkt >> 8) & 0xFFu, ((pkt >> 4) & 15u) ? 2u : 1u);
             continue;
         }
+#if FELUCCA_LEARN
+        if (st == 0x90u || st == 0x80u)
+            learn_midi_in(st | ch, d1, d2);           /* (the tutor shows what the other box plays; the note still plays) */
+#endif
         if (song.g[G_RMCH] && ch == (uint32_t)song.g[G_RMCH] - 1u && st == 0xB0u && d1 >= REMOTE_CC0 &&
             d1 < REMOTE_CC0 + 14u) {                  /* 2.7: REMOTE (GLO > MIDI 3): the buttons over MIDI */
             remote_cc(d1 - REMOTE_CC0, d2);
