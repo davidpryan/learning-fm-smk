@@ -1,18 +1,14 @@
-# SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception
-# Device firmware on Ubuntu: M-VAVE's own Build.ps1 (under pwsh) with JieLi's
-# Linux toolchain, the same clang 4.0.1 for pi32v2 that the Windows kit
-# ships, published by JieLi as a plain tarball. No installer, no secrets.
-# tools/overlay.py --host-os linux adjusts only tool file names in the
-# assembled copy of Build.ps1 (audited); every SDK hash check stays on.
-#
-# The toolchain tarball is pinned by SHA-256 in tools/ci/jieli-linux.sha256.
-# On the very first run that file is empty: the job prints the hash and
-# fails; commit the hash and re-run.
+# SPDX-License-Identifier: GPL-3.0-only
+# Device firmware on Ubuntu with SLOOP's own build (tools/build.py) and
+# JieLi's Linux toolchain, as the Felucca-family firmwares build.
+# Matrix: the plain SLOOP baseline (proves the toolchain and prints the
+# flash/RAM headroom) and, once present, the learn stages.
 name: firmware
 on:
   push:
     branches: [main]
     tags: ["v*"]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,49 +19,46 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        board: [fm1, smk37]
-        stage: [1, 2, 3, 4]
-        model: [elite]
         include:
-          - { board: smk37, stage: 1, model: pro }
-          - { board: smk37, stage: 2, model: pro }
-          - { board: smk37, stage: 3, model: pro }
-          - { board: smk37, stage: 4, model: pro }
-    env:
-      PAIR: ${{ matrix.board }}-s${{ matrix.stage }}${{ matrix.board == 'smk37' && format('-{0}', matrix.model) || '' }}
+          - { name: sloop-baseline-elite, board: smk37, model: elite, learn: 0, stage: 0 }
+          - { name: sloop-baseline-fm1,   board: fm1,   model: "",    learn: 0, stage: 0 }
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Lessons, tree, audit
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python deps (SLOOP needs Pillow with raqm)
         run: |
-          python3 tools/make_lessons.py
-          python3 tools/overlay.py --board ${{ matrix.board }} --stage ${{ matrix.stage }} --model ${{ matrix.model }} --host-os linux --out build/trees/$PAIR
-          python3 tools/audit_safety.py --tree build/trees/$PAIR
-      - name: Toolchain cache
-        id: cache
+          sudo apt-get update -q && sudo apt-get install -y -q libraqm0 libfribidi0 libharfbuzz0b > /dev/null
+          python3 -m pip install -q Pillow fonttools
+          python3 -c "from PIL import features; assert features.check('raqm'), 'Pillow without raqm'"
+      - name: Toolchain + SDK cache
         uses: actions/cache@v4
         with:
-          path: ~/.jieli
-          key: jieli-linux-${{ hashFiles('tools/ci/jieli-linux.sha256') }}
-      - name: JieLi Linux toolchain
-        run: tools/ci/get_linux_toolchain.sh ~/.jieli
-      - name: Build firmware (FM-1)
-        if: matrix.board == 'fm1'
-        shell: pwsh
-        working-directory: build/trees/${{ env.PAIR }}
-        run: ./sdk/Build.ps1 -FirmwareOnly -Toolchain $env:FM1_PI32_TOOLCHAIN
-      - name: Build firmware (SMK-37)
-        if: matrix.board == 'smk37'
-        shell: pwsh
-        working-directory: build/trees/${{ env.PAIR }}
-        run: ./sdk/Build.ps1 -Model ${{ matrix.model }} -FirmwareOnly -Toolchain $env:FM1_PI32_TOOLCHAIN
-      - name: Collect, hash, provenance
-        run: python3 tools/collect_packages.py --board ${{ matrix.board }} --stage ${{ matrix.stage }} --model ${{ matrix.model }} --out dist
-      - name: Verify
-        run: python3 tools/verify_release.py dist
+          path: |
+            ~/.jieli
+            ~/fw-AC79_AIoT_SDK
+          key: jieli-ac79-${{ hashFiles('tools/jieli-linux.sha256', 'tools/ci_deps.sh') }}
+      - name: Toolchain + SDK files
+        run: tools/ci_deps.sh
+      - name: Build
+        working-directory: sloop
+        env:
+          BOARD: ${{ matrix.board }}
+          MODEL: ${{ matrix.model }}
+          FELUCCA_LEARN: ${{ matrix.learn }}
+          LEARN_STAGE: ${{ matrix.stage }}
+        run: |
+          ./build.sh 2>&1 | tee ../build-${{ matrix.name }}.log
+          ls -l build/*.fwsc
+      - name: Headroom
+        run: grep -E "image [0-9]+ B|RAM|pool|exceeds" build-${{ matrix.name }}.log || true
       - uses: actions/upload-artifact@v4
         with:
-          name: firmware-${{ env.PAIR }}
-          path: dist/
+          name: ${{ matrix.name }}
+          path: |
+            sloop/build/*.fwsc
+            build-${{ matrix.name }}.log
           if-no-files-found: error

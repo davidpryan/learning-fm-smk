@@ -1,58 +1,38 @@
-# Learning firmware pairs for the M-VAVE FM-1 and SMK-37 Elite (and Pro)
+# Learning firmware for the M-VAVE SMK-37 Elite and FM-1
 
 Four teaching firmwares, one per stage, that take a complete beginner from
-"what note is this?" to a finished song on two inexpensive boxes:
+"what note is this?" to a finished song on two inexpensive boxes. Built on
+**SLOOP** (the open 4-track groovebox firmware for the FM-1) with
+genkigenki's SMK-37 board layer, the way every existing open SMK-37 firmware
+is built. GPL-3.0-only.
 
-| Stage | SMK-37 Elite / Pro | FM-1 | New idea |
+| Stage | SMK-37 Elite | FM-1 | New idea |
 | --- | --- | --- | --- |
 | 1 Hear it | Lantern | Ember | notes and chords named as you play, drills, 20 lessons |
 | 2 Loop it | Pulse | Root | chord loop, generated drums, a bass that follows |
-| 3 Grow it | Shadow | Tape | tracks defined relative to other tracks, a 4-track recorder |
+| 3 Grow it | Shadow | Tape | tracks defined relative to other tracks, takes |
 | 4 Finish it | Stage | Scribe | sections, transitions, a whole song performed by hand |
 
-The SMK-37 Elite is the primary target; the Pro shares the same source and gets its own package with its own update identity (the loader refuses a mismatch).
-
-Built on M-VAVE's official open firmware ([fm1_open](https://github.com/m-vave/fm1_open),
-[smk37_open](https://github.com/m-vave/smk37_open)) and installed with
-M-VAVE's own browser workbench. **Read [docs/SAFETY.md](docs/SAFETY.md)
-before installing anything.** Unofficial; not affiliated with M-VAVE.
-
-## Get the firmware
-
-Each tagged release publishes, for every pair and board (SMK-37 Elite, SMK-37 Pro, FM-1): the `.fwsc`
-package, its SHA-256, a provenance file (source commits, build time) and the corresponding source
-archive. Install with M-VAVE's hosted workbench (open.m-vave.com), which also
-has Restore factory. The install
-site (`pages` workflow, GitHub Pages) has one page per pair.
-
-## Build and test on any machine
-
-```
-git clone --recurse-submodules <this repo>
-python3 tools/make_lessons.py              # lessons/*.json -> C table + .syx selectors
-python3 tools/overlay.py --all             # assembles build/trees/<board>-s<stage> (SMK-37: --model elite|pro, default elite)
-for t in build/trees/*; do tools/host_build.sh "$t"; done   # native build + simulator tests
-python3 tools/audit_safety.py              # no Flash writes, only the reviewed hooks
-tools/device_syntax_check.sh build/trees/smk37-s4           # device-header syntax + sizes
-```
-Device packages are built by the vendor `sdk/Build.ps1` (under `pwsh`) with
-JieLi's pi32v2 clang; the `firmware` workflow does this on Ubuntu with
-JieLi's Linux toolchain tarball, pinned by SHA-256. See
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+**Status:** the base (plain SLOOP for the SMK-37 Elite and the FM-1) builds in
+CI; the learn layer is being re-targeted from the earlier M-VAVE Open SDK
+version (kept in `attic/`, see `attic/WHY.md`). Read `docs/SAFETY.md` before
+installing anything.
 
 ## Layout
 
-* `overlay/app/learn/` the learn layer: shared code plus one file per stage
-* `lessons/` the 20 lesson packs (JSON); `tools/make_lessons.py` compiles them
-* `tools/overlay.py` assembles a buildable tree; `tools/audit_safety.py` checks it
-* `tools/host/` native test harness on the vendor browser engine
-* `vendor/` the two official open firmwares, pinned (`VENDOR-PINS.txt`)
-* `docs/` safety, recovery, architecture, spec, per-stage control references
-* `.github/workflows/` ci (host tests), firmware (device builds), release, pages
+* `sloop/` SLOOP with the SMK-37 board layer, vendored verbatim (`sloop/UPSTREAM.txt`)
+* `learn/` the learn layer (compiled into SLOOP behind `FELUCCA_LEARN=1`)
+* `lessons/` the 20 lesson packs and their generator
+* `docs/` design, safety, recovery, per-stage control references
+* `tools/` CI dependency fetcher (toolchain + SDK files, hash-verified)
+* `attic/` the earlier Open-SDK implementation, for reference
 
-## Licence
+## Build
 
-GPL-3.0-only WITH the FM1/SMK37 SDK linking exception, the same terms as
-the vendor APP sources (`LICENSE`). Built packages contain the vendor binary
-SDK under its own terms (`vendor/*/THIRD_PARTY.md`); the release workflow
-ships those notices and the corresponding source with every package.
+```
+tools/ci_deps.sh                       # JieLi Linux toolchain + 3 AC79 SDK files (~/.jieli, ~/fw-AC79_AIoT_SDK)
+cd sloop && BOARD=smk37 MODEL=elite ./build.sh      # -> build/sloop-smk37-elite.fwsc
+cd sloop && ./build.sh                               # FM-1
+```
+Install with `sloop/tools/fm1_install.py` or the web installer; back to stock
+with M-VAVE's updater. See `sloop/SMK37.md`.

@@ -1,0 +1,6 @@
+Base: SLOOP (isod89/sloop-fm1) with the SMK-37 board layer by genkigenki,
+branch smk37 of https://github.com/genkigenki/sloop-fm1
+commit cab21106ca2846150a183717a2145e70bd1aa2b1
+"SMK-37: a turn of the volume knob shows MASTER and its level in the top bar"
+GPL-3.0-only (see LICENSE, LICENSING.md). Vendored verbatim; the learn layer
+is added behind FELUCCA_LEARN so the plain SLOOP build stays byte-identical.
