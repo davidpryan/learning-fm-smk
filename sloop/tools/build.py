@@ -366,6 +366,9 @@ def main():
         stem += "-" + model
     if os.environ.get("FELUCCA_LEARN") == "1":   # the learn layer (learn/learn.c): its own package name, by stage
         stem += "-learn-s" + (os.environ.get("LEARN_STAGE") or "1")
+        # a learn firmware carries the piano, the upright bass, the vibes and the GM kit; the other sampled
+        # instruments (horns, strings, flute, scratch) make room for the learn layer (gen_samples.py)
+        os.environ.setdefault("FELUCCA_SAMPLE_SETS", "PIANO,BASS,VIBES")
     name = f"{stem}.fwsc"
     if a.release:                   # one digit each: the identity has room for two
         m = re.fullmatch(r"(\d)\.(\d)(-[A-Za-z0-9]+)?", a.release)

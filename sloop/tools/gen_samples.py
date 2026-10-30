@@ -432,7 +432,8 @@ def input_key(have_cc0):
     here = Path(__file__).resolve().parent
     for p in (here / "gen_samples.py", here / "sampleio.py"):
         h.update(p.read_bytes())
-    h.update(repr((sys.version_info[:2], have_cc0, os.environ.get("FELUCCA_SLICE") == "1")).encode())   # sum() differs across versions
+    h.update(repr((sys.version_info[:2], have_cc0, os.environ.get("FELUCCA_SLICE") == "1",
+                   os.environ.get("FELUCCA_SAMPLE_SETS", ""))).encode())   # sum() differs across versions
     files = sorted(GENDIR.glob("*.wav"))
     if have_cc0:
         files += sorted(CC0.glob("*/*.wav"))
@@ -457,9 +458,13 @@ def main(out):
     except (OSError, ValueError):
         pass
     b = Builder()
+    # FELUCCA_SAMPLE_SETS="PIANO,BASS": only these CC0 instrument sets (a smaller firmware, e.g. the learn
+    # builds: the GM kit always stays). Unset: every set, as ever.
+    keep = os.environ.get("FELUCCA_SAMPLE_SETS")
+    keep = {k.strip().upper() for k in keep.split(",") if k.strip()} if keep is not None else None
     if have_cc0:
         for name, kind in CC0_SETS:
-            if kind != "kit":                       # the CC0 KIT feeds the GM kit
+            if kind != "kit" and (keep is None or name in keep):   # the CC0 KIT feeds the GM kit
                 b.cc0_set(name, kind)
     b.gm_kit(have_cc0)
     if os.environ.get("FELUCCA_SLICE") == "1":       # SLICE's BREAK: only when that engine is built

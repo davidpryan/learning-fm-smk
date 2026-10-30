@@ -51,6 +51,8 @@ jobs:
           - { name: sloop-baseline-fm1,   board: fm1,   model: "",    learn: 0, stage: 0 }
           - { name: learn-s1-elite,       board: smk37, model: elite, learn: 1, stage: 1 }
           - { name: learn-s1-fm1,         board: fm1,   model: "",    learn: 1, stage: 1 }
+          - { name: learn-s2-elite,       board: smk37, model: elite, learn: 1, stage: 2 }
+          - { name: learn-s2-fm1,         board: fm1,   model: "",    learn: 1, stage: 2 }
     steps:
       - uses: actions/checkout@v4
         with:
