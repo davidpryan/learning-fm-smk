@@ -29,7 +29,12 @@
 #include "pre.h"
 
 /* ---- board ---- */
-#if BOARD_SMK37
+/* LEARN_UI_SMK: the SMK-37's screens, names, pads and keybed (default: the board built). The host review harness
+ * sets it on an FM-1 build to render the SMK-37 screens; the hardware glue (midi.c, main.c lights) stays BOARD_SMK37. */
+#ifndef LEARN_UI_SMK
+#define LEARN_UI_SMK BOARD_SMK37
+#endif
+#if LEARN_UI_SMK
 #define LEARN_BOARD_SMK37 1
 #define LEARN_KEYS 37u
 #define LEARN_PADS 16u
@@ -46,7 +51,7 @@
 /* What the buttons and knobs are called on the panel in the player's hands (the screen's words):
  * the SMK-37 prints other names than SLOOP's labels, and its K1 is the volume, so SLOOP's seven function knobs
  * are its K2..K8. */
-#if BOARD_SMK37
+#if LEARN_UI_SMK
 #define LBL_PLAY "SEQ PLAY"
 #define LBL_REC "SEQ REC"
 #define LBL_HOME "PATCH"

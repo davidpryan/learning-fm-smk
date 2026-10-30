@@ -460,7 +460,7 @@ static void overlay_log(void)
 }
 /* the help: three screens a page (what it is for and how to learn here; the buttons; the knobs, faders, pads), in the
  * names printed on the panel in the player's hands. Each line fits the screen (29 characters). */
-#if BOARD_SMK37
+#if LEARN_UI_SMK
 #define HK(n) "K" #n
 #define HLINES_COMMON "GLOBE+SEQ: NEXT HELP SCREEN", "GLOBE+ARP: YOUR RESULTS", "GLOBE+PATCH 2S: PLAIN SLOOP"
 static const char *const HELP1[3][12] = {
