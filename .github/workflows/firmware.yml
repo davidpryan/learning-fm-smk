@@ -80,7 +80,13 @@ jobs:
           FELUCCA_LEARN: ${{ matrix.learn }}
           LEARN_STAGE: ${{ matrix.stage }}
         run: |
+          set +e
           ./build.sh 2>&1 | tee ../build-${{ matrix.name }}.log
+          st=${PIPESTATUS[0]}
+          if [ "$st" != 0 ]; then   # the errors as annotations too (readable through the API when the log is not)
+            grep -nE "error|Error|exceeds|undefined|overflow|FAIL" ../build-${{ matrix.name }}.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+            exit "$st"
+          fi
           ls -l build/*.fwsc
       - name: Headroom
         run: |
