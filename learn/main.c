@@ -27,8 +27,12 @@ static const char *learn_notice_text(void) { return lnotice[0] && (int32_t)(fm1_
 
 /* ---- pages ---- */
 static unsigned learn_page(void) { return lpage; }
+static uint8_t lpage_inited;                      /* bit per page: set up once per LEARN session (a page keeps its work) */
 static void stage_init_page(unsigned p)
 {
+    if (lpage_inited & (1u << p))
+        return;
+    lpage_inited |= (uint8_t)(1u << p);
     switch (p) {
     default: stage1_init(); break;
 #if LEARN_STAGE >= 2
@@ -155,8 +159,11 @@ static void learn_set(int on)
             trk[t].p[P_AHOLD] = 0;
         }
         lpage = 1;
+        lpage_inited = 0;
+        lov_log = lov_help = 0;
+        lresult.valid = 0;
         stage_init_page(1);
-        learn_notice("LEARN ON. GLO+HOME 2S = SLOOP", 2500);
+        learn_notice("LEARN ON. " LBL_GLO "+SEQ: HELP", 3000);
         lx.redraw = 1;
         ld_dirty = 1;
         learn_on = 1;
@@ -333,6 +340,15 @@ static void learn_input(uint32_t pressed, uint32_t now_ticks)
     /* the layer's own buttons: OCT -/+ the octave, SEQ the next page */
     if (lx.btn_down & LB(LB_OCT_DOWN)) { if (lx.octave > -2) lx.octave--; lx.redraw = 1; }
     if (lx.btn_down & LB(LB_OCT_UP)) { if (lx.octave < 2) lx.octave++; lx.redraw = 1; }
+    if ((lx.btn_down & LB(LB_SEQ)) && (lx.buttons & LB(LB_GLO))) {   /* GLO + SEQ: this page's help */
+        lov_help = !lov_help; lov_log = 0; lx.btn_down &= ~LB(LB_SEQ); ld_dirty = 1;
+    }
+    if ((lx.btn_down & LB(LB_ARP)) && (lx.buttons & LB(LB_GLO))) {   /* GLO + ARP: the results log */
+        lov_log = !lov_log; lov_help = 0; lx.btn_down &= ~LB(LB_ARP); ld_dirty = 1;
+    }
+    if ((lov_log || lov_help) && (lx.btn_down & ~(LB(LB_GLO) | LB(LB_SEQ) | LB(LB_ARP)))) {   /* any other button closes an overlay */
+        lov_log = lov_help = 0; ld_dirty = 1;
+    }
 #if LEARN_STAGE >= 2
     if (lx.btn_down & LB(LB_SEQ)) {
         learn_set_page(lpage % LEARN_STAGE + 1u);
@@ -408,6 +424,73 @@ static void learn_input(uint32_t pressed, uint32_t now_ticks)
     }
 }
 
+/* ---- the overlays: the results log and the page's help ---- */
+static void overlay_log(void)
+{
+    static const char *const KIND[7] = {"ECHO", "CHORD", "PROG", "RHYTHM", "TAKE", "SONG", "LESSON"};
+    char line[40];
+    unsigned n, i, count = log_count();
+    n = ls_cat(line, 0, sizeof line, "RESULTS  STREAK "); n = ls_num(line, n, sizeof line, log_streak());
+    n = ls_cat(line, n, sizeof line, "  TODAY "); ls_num(line, n, sizeof line, log_attempts());
+    ld_bar_text(0, line, LC_PANEL, LC_TEXT);
+    if (!count) {
+        ld_text(4, 40, "NOTHING YET.", 0, LC_DIM);
+        ld_text(4, 58, "A DRILL OR A LESSON WRITES", 0, LC_DIM);
+        ld_text(4, 76, "ITS SCORE HERE.", 0, LC_DIM);
+    }
+    for (i = 0; i < count && i < 10u; i++) {      /* newest first */
+        const struct log_entry *e = log_get(i);
+        unsigned tries;
+        if (!e) break;
+        tries = e->hits + e->misses;
+        n = ls_cat(line, 0, sizeof line, KIND[e->kind % 7u]);
+        while (n < 7u) line[n++] = ' ';
+        line[n] = 0;
+        if (e->lesson) { n = ls_cat(line, n, sizeof line, "L"); n = ls_num(line, n, sizeof line, e->lesson); if (e->lesson < 10u) n = ls_cat(line, n, sizeof line, " "); n = ls_cat(line, n, sizeof line, " "); }
+        else n = ls_cat(line, n, sizeof line, "    ");
+        if (tries && e->kind <= LOGK_RHYTHM) { n = ls_num(line, n, sizeof line, e->hits); n = ls_cat(line, n, sizeof line, "/"); n = ls_num(line, n, sizeof line, tries); n = ls_cat(line, n, sizeof line, " "); }
+        n = ls_num(line, n, sizeof line, e->score); n = ls_cat(line, n, sizeof line, "%");
+        if (e->slow) n = ls_cat(line, n, sizeof line, " SLOW");
+        ld_text(4, 22 + (int)i * 18, line, 0, e->score >= 80u ? LC_GREEN : LC_AMBER);
+    }
+    ld_text(4, 222, LBL_GLO "+ARP CLOSES", 0, LC_DIM);
+}
+static void overlay_help(void)
+{
+#if BOARD_SMK37
+    static const char *const H1[] = {"PAGE 1 LANTERN: HEAR IT", "KEYS: PLAY. SCREEN NAMES IT", "PADS 1-7: CHORDS I-VII",
+        "PADS 9-15: THE SAME + 7TH", "SEQ PLAY: DRILL SEQ REC: REDO", "ARP: LESSON ON / OFF", "SCALE: SCALE TYPE",
+        "GLOBE+KEY: ROOT  CHORD: HINTS", "K2 SOUND K3 PATCH K4 REV K5DL", "K6 SLOW K7 LESSON K8 DRILL", "GLOBE+ARP: RESULTS", 0};
+    static const char *const H2[] = {"PAGE 2 PULSE: LOOP IT", "SEQ PLAY: LOOP ON / OFF", "PADS: THE LANE'S 16 STEPS",
+        "FX: PADS = CHORDS OR GRID", "SCALE: NEXT LANE  BT: RE-ROLL", "SEQ REC: CHORD REC / RAW-SNAP", "SEQ REC+SEQ PLAY: MELODY TAKE",
+        "CHORD: RHYTHM TRAINER", "K2 HITS K3 SHIFT K4 SWG K5FIL", "K6 BASS K7 TEMPO K8 SNAP", "PARA+KNOB: PATCH TRACK SLOW..", 0};
+    static const char *const H3[] = {"PAGE 3 SHADOW: GROW IT", "PADS 1-3: SOURCE, THEN", "PADS 9-16: A RULE = A SHADOW",
+        "PADS 4-6: SLOT A B C, HOLD=RM", "SEQ REC+SEQ PLAY: TAPE A PASS", "SEQ REC WHILE PLAYING: PUNCH", "BT: UNDO TAKE  GLOBE+BT: REDO",
+        "NOTE RPT: HEAR SOURCE, SHADOW", "K2 OCT K3 DENS K4 VEL K5 PTCH", "FADERS 1-3: OBEDIENCE A B C", "PAD 8: EXPORT OVER USB", 0};
+    static const char *const H4[] = {"PAGE 4 STAGE: FINISH IT", "GLOBE+PAD 9-16: STORE LOOP AS", "SLOT 1-8 (SCALE: ITS TYPE)",
+        "PAD 1-8: PLAY SLOT, NEXT LOOP", "2X TAP: NEXT BEAT  HOLD: ONCE", "SEQ REC: RECORD THE ORDER", "PATCH: STOP (AGAIN: DISCARD)",
+        "K2 ENERGY K6 TRANSITION", "K7 TEMPO K8 SWING", "FADERS: ENERGY DRUM MUSIC MEL", "PAD HELD 2S: WHAT IS IN IT", 0};
+#else
+    static const char *const H1[] = {"PAGE 1 EMBER: HEAR IT", "KEYS: PLAY. SCREEN NAMES IT", "GLO+SCL: CHORD KEYS",
+        "PLAY: DRILL  REC: REPLAY", "ARP: LESSON ON / OFF", "SCL: SCALE  GLO+KEY: ROOT", "ENV: HINTS+NUDGE  FX: STAFF",
+        "K1 SOUND K2 PATCH K3 REV K4DL", "K5 SLOW K6 LESSON K7 DRILL", "GLO+ARP: RESULTS", 0};
+    static const char *const H2[] = {"PAGE 2 ROOT: LOOP IT", "PLAY: LOOP ON / OFF", "FX: KEYS = CHORDS OR MELODY",
+        "GLO+KEYS 1-16: LANE STEPS", "GLO+KEYS 17-19: BASS RULE", "SCL: NEXT LANE  SAVE: RE-ROLL", "REC: CHORD REC / RAW-SNAP",
+        "REC+PLAY: MELODY TAKE", "ENV: RHYTHM TRAINER (ANY KEY)", "K1 HITS K2 SHIFT K3 SWG K4FIL", "K5 BASS K6 TEMPO K7 SNAP", 0};
+    static const char *const H3[] = {"PAGE 3 TAPE: GROW IT", "GLO+KEYS 1-3: SOURCE, THEN", "GLO+KEYS 9-16: A RULE",
+        "GLO+KEYS 4-6: SLOT A B C", "REC+PLAY: TAPE A PASS", "REC WHILE PLAYING: PUNCH", "SAVE: UNDO  GLO+SAVE: REDO",
+        "LFO: HEAR SOURCE / SHADOW", "K1 OCT K2 OBEDIENCE K3 VEL", "FX: REMOVE SHADOW  EDIT: SLOT", "HOME+REC: EXPORT OVER USB", 0};
+    static const char *const H4[] = {"PAGE 4 SCRIBE: FINISH IT", "GLO+KEYS 9-16: STORE LOOP AS", "SLOT 1-8 (SCL: ITS TYPE)",
+        "GLO+KEYS 1-8: SLOT, NEXT LOOP", "2X TAP: NEXT BEAT  HOLD: ONCE", "REC: RECORD THE ORDER", "HOME: STOP (AGAIN: DISCARD)",
+        "K1 ENERGY K5 TRANSITION", "K6 TEMPO K7 SWING", "SAVE: STORE INTO CURSOR SLOT", "SEQ: NEXT PAGE", 0};
+#endif
+    const char *const *h = lpage == 2u ? H2 : lpage == 3u ? H3 : lpage == 4u ? H4 : H1;
+    unsigned i;
+    ld_bar_text(0, h[0], LC_PANEL, LC_TEXT);
+    for (i = 1; h[i]; i++) ld_text(4, 22 + (int)(i - 1u) * 18, h[i], 0, i == 1u ? LC_TEXT : LC_DIM);
+    ld_text(4, 222, LBL_GLO "+" LBL_HOME " 2S: SLOOP", 0, LC_DIM);
+}
+
 /* ---- the screen (ui_draw.c): 1 = LEARN mode drew (or kept) the screen, 0 = not ours ---- */
 static int learn_screen(void)
 {
@@ -425,7 +508,15 @@ static int learn_screen(void)
     for (pass = 0; pass < 2; pass++) {
         ld_y0 = pass * 120;
         cv_begin(240, 120, LC_BG);
-        page_draw(&lx);
+        if (lov_help) overlay_help();
+        else if (lov_log) overlay_log();
+        else {
+            char tag[6];
+            unsigned n = ls_cat(tag, 0, sizeof tag, "P");
+            n = ls_num(tag, n, sizeof tag, lpage); n = ls_cat(tag, n, sizeof tag, "/"); ls_num(tag, n, sizeof tag, LEARN_STAGE);
+            page_draw(&lx);
+            ld_text(188, 2, tag, 0, LC_PANEL);    /* which of the pages this is */
+        }
         cv_blit(0, (uint32_t)ld_y0);
     }
     return 1;

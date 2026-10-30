@@ -1,6 +1,6 @@
 # Page 4 — Finish it: Stage (SMK-37 Elite) + Scribe (FM-1)
 
-> These firmwares build on SLOOP: the SMK-37 Elite's buttons are the ones its HARDWARE CALIBRATION maps to SLOOP's FX, SEL, ENV, LFO, EDIT, GLO, HOME, SAVE, ARP, SEQ, PLAY, REC, OCT−/OCT+ (see `sloop/SMK37.md`); there is no SHIFT, so GLO is the modifier on both boards. Sounds are SLOOP's engines and presets (K1 engine, K2 preset on page 1). SEQ cycles the four pages; GLO + HOME held two seconds returns to plain SLOOP.
+> These firmwares build on SLOOP. **On the SMK-37 Elite** the names below are SLOOP's; the keyboard prints them differently: PLAY = SEQ PLAY, REC = SEQ REC, HOME = PATCH, GLO = GLOBE, SCL = SCALE, ENV = CHORD, LFO = NOTE REPEAT, EDIT = PARA, SAVE = BT (there is no SHIFT: GLO is the modifier on both boards), and because the SMK-37's K1 is the volume, **the knobs K1…K7 in these tables are the printed K2…K8**. On the FM-1 the names match. SEQ cycles the four pages; GLO + SEQ shows the page's help on the screen; GLO + ARP shows the results log; GLO + HOME held two seconds returns to plain SLOOP.
 
 
 Page 4 (press SEQ until the header reads STAGE or SCRIBE). The loop you built

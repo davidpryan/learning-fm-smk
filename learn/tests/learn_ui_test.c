@@ -179,6 +179,39 @@ int main(int argc, char **argv)
         check(!lesson_running(), "a frame for the SMK: ignored on the FM-1");
     }
 
+    /* ---- a whole drill, answered right: the result card stays; the log and help overlays ---- */
+    tap(B_HOME); frames(2);
+    lx.root = 0; lx.scale = SCALE_MAJOR; lx.minor = 0;
+    tap(B_PLAY);
+    for (i = 0; i < 4000 && s1d.state != DS_IDLE; i++) {
+        if (s1d.state == DS_WAIT_ANSWER && !s1d.answer_count) { int k = (int)s1d.target[0] - 53; if (k >= 0 && k < 27) key((uint32_t)k); }
+        frame();
+    }
+    check(s1d.state == DS_IDLE && lresult.valid && lresult.pct == 100 && lresult.passed, "ten right answers: the result card, 100 %, passed");
+    shot("learn-s1-result");
+    check(log_count() >= 1 && log_get(0)->score == 100, "the log has it");
+    fm1_in.buttons |= BT(B_GLO); frame(); tap(B_ARP); fm1_in.buttons &= ~BT(B_GLO); frame();
+    check(lov_log && !lesson_running(), "GLO + ARP: the results log, not a lesson");
+    shot("learn-log");
+    fm1_in.buttons |= BT(B_GLO); frame(); tap(B_SEQ); fm1_in.buttons &= ~BT(B_GLO); frame();
+    check(lov_help && !lov_log && learn_page() == 1, "GLO + SEQ: the help, the page unchanged");
+    shot("learn-help");
+    tap(B_ENV);
+    check(!lov_help, "any button closes it");
+    tap(B_ENV);
+    kdown(7); frames(2);
+    check(!lresult.valid, "a key clears the result card");
+    key_up_(7); frames(2);
+#if LEARN_STAGE >= 2
+    /* ---- pages keep their work across a visit elsewhere ---- */
+    tap(B_SEQ); frames(2);
+    check(learn_page() == 2, "SEQ: page 2");
+    encs[panel.enc[5]] = 1; frame();
+    { unsigned t = lsong.tempo; tap(B_SEQ); frames(2); for (i = 2; i < LEARN_STAGE; i++) { tap(B_SEQ); frames(2); } tap(B_SEQ); frames(2);
+      check(learn_page() == 2 && lsong.tempo == t, "round the pages and back: page 2 kept its tempo"); }
+    while (learn_page() != 1) { tap(B_SEQ); frames(2); }
+#endif
+
     /* ---- back to SLOOP ---- */
     kdown(7); frames(2);
     hold_both(1700);

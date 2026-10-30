@@ -43,6 +43,34 @@
 #define LEARN_DEVICE LDEV_FM1
 #endif
 
+/* What the buttons and knobs are called on the panel in the player's hands (the screen's words):
+ * the SMK-37 prints other names than SLOOP's labels, and its K1 is the volume, so SLOOP's seven function knobs
+ * are its K2..K8. */
+#if BOARD_SMK37
+#define LBL_PLAY "SEQ PLAY"
+#define LBL_REC "SEQ REC"
+#define LBL_HOME "PATCH"
+#define LBL_GLO "GLOBE"
+#define LBL_SCL "SCALE"
+#define LBL_ENV "CHORD"
+#define LBL_LFO "NOTE RPT"
+#define LBL_EDIT "PARA"
+#define LBL_SAVE "BT"
+#define LBL_K(n) ("K" #n)        /* (n: the printed knob; see LKN for the layer's knob numbers) */
+static const char *const LKN[7] = {"K2", "K3", "K4", "K5", "K6", "K7", "K8"};   /* the layer's knob 1..7 as printed */
+#else
+#define LBL_PLAY "PLAY"
+#define LBL_REC "REC"
+#define LBL_HOME "HOME"
+#define LBL_GLO "GLO"
+#define LBL_SCL "SCL"
+#define LBL_ENV "ENV"
+#define LBL_LFO "LFO"
+#define LBL_EDIT "EDIT"
+#define LBL_SAVE "SAVE"
+static const char *const LKN[7] = {"K1", "K2", "K3", "K4", "K5", "K6", "K7"};
+#endif
+
 /* Logical buttons: SLOOP's panel labels (panel.c B_*), both boards. */
 enum { LB_FX = B_FX, LB_SCL = B_SCL, LB_ENV = B_ENV, LB_LFO = B_LFO, LB_EDIT = B_EDIT, LB_GLO = B_GLO,
        LB_HOME = B_HOME, LB_SAVE = B_SAVE, LB_ARP = B_ARP, LB_SEQ = B_SEQ, LB_PLAY = B_PLAY, LB_REC = B_REC,
@@ -62,18 +90,22 @@ enum { LB_FX = B_FX, LB_SCL = B_SCL, LB_ENV = B_ENV, LB_LFO = B_LFO, LB_EDIT = B
 #define LC_PURPLE 0xA81F
 #define LC_PANEL  0x1082
 #define LC_AMBER  0xFEA0
-/* Pad brightness is modest (SLOOP's DAW mode uses up to 255; the stock firmware <= 0x30). */
+/* Pad colours (0xRRGGBB) at the brightness SLOOP's own pad palette uses; P_DIM a quarter, P_FULL saturated. */
 #define P_OFF    0x000000
-#define P_GREEN  0x003000
-#define P_ORANGE 0x301000
-#define P_CYAN   0x003030
-#define P_BLUE   0x000838
-#define P_RED    0x300000
-#define P_YELLOW 0x302800
-#define P_WHITE  0x202020
-#define P_PURPLE 0x200030
+#define P_GREEN  0x1e9a50
+#define P_ORANGE 0xa04010
+#define P_CYAN   0x1a8c90
+#define P_BLUE   0x2060c0
+#define P_RED    0xb01818
+#define P_YELLOW 0xa08010
+#define P_WHITE  0x606060
+#define P_PURPLE 0x6a20a0
 #define P_DIM(c) ((((c) >> 2) & 0x3f3f3f))
-#define P_FULL(c) ((((c) << 1) & 0x7f7f7f))
+static uint32_t P_FULL(uint32_t c)
+{
+    uint32_t r = ((c >> 16) & 255u) * 2u, g = ((c >> 8) & 255u) * 2u, b = (c & 255u) * 2u;
+    return (r > 255u ? 255u : r) << 16 | (g > 255u ? 255u : g) << 8 | (b > 255u ? 255u : b);
+}
 
 /* ---- music theory (theory.c) ---- */
 enum { SCALE_MAJOR, SCALE_MINOR, SCALE_PENT_MAJ, SCALE_PENT_MIN, SCALE_BLUES, SCALE_COUNT };
@@ -101,7 +133,8 @@ static void ld_frame(int x, int y, int w, int h, uint16_t c);
 static void ld_text(int x, int y, const char *s, unsigned big, uint16_t c);   /* big: FONT_L (32 px) else FONT_S (16 px) */
 static int ld_text_w(const char *s, unsigned big);
 static void ld_text_c(int y, const char *s, unsigned big, uint16_t c);
-static void ld_keymap(int y, int h, unsigned keys, unsigned first_note, uint32_t lit, uint32_t bright);
+static void ld_keymap(int y, int h, unsigned keys, unsigned first_note, const uint8_t *state);   /* state[k]: 0 off, 1 lit, 2 bright */
+static void ld_bar_text(int y, const char *s, uint16_t bar, uint16_t fg);   /* a line of text on a filled bar */
 static void ld_staff(int x, int y, unsigned note);
 static void ld_dot(int x, int y, int r, uint16_t c);
 /* small string helpers (no printf on the device) */
@@ -227,6 +260,10 @@ static void lesson_step_done(unsigned passed, unsigned score);
 static unsigned lesson_progress(void);
 /* the key lights (FM-1: the LEDs under the 27 keys; both: the keymap strip): bit k = key k from F3 */
 static uint32_t llit_keys, lbright_keys;
+/* overlays shared by every page (main.c): the results log (GLO + ARP) and the page's help (GLO + SEQ) */
+static uint8_t lov_log, lov_help;
+/* the last drill's result, shown until the player plays again (page 1 fills it; main.c draws nothing of it) */
+static struct { uint8_t valid, kind, passed; unsigned hits, misses, pct; } lresult;
 /* the metronome / clock the stages share: SLOOP's tempo */
 static unsigned learn_bpm(void);
 static void learn_set_bpm(unsigned bpm);

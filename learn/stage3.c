@@ -464,7 +464,7 @@ static void stage3_pad(struct lctx *x, unsigned pad, unsigned velocity, unsigned
         s3_pad_down[pad] = 1; s3_pad_since[pad] = x->now; s3_pad_hint_done[pad] = 0;
         if (pad < 6 && (x->buttons & LB(LB_GLO))) { solo_set(pad < 3 ? SRC_TRACK[pad] : (pad == 3 ? LT_CHORDS : pad == 4 ? LT_KEYS : LT_DRUMS), 1); x->redraw = 1; return; }
         if (pad < 3) select_source(x, pad);
-        else if (pad < 6) { s3_sel = (uint8_t)(pad - 3); learn_notice(s3_sh[s3_sel].used ? "SHADOW SELECTED: K1-K4 EDIT" : "EMPTY SLOT: SOURCE THEN RULE", 900); }
+        else if (pad < 6) { s3_sel = (uint8_t)(pad - 3); learn_notice(s3_sh[s3_sel].used ? (LEARN_PADS ? "SHADOW SELECTED: K2-K5 EDIT" : "SHADOW SELECTED: K1-K4 EDIT") : "EMPTY SLOT: SOURCE THEN RULE", 900); }
         else if (pad == 6) select_tape(x, (s3_tape + 1u) % TAPE_TRACKS);
         else if (pad == 7) { s3_export_on = 1; s3_export_track = s3_export_frame = 0; learn_notice("EXPORTING TRACKS...", 1000); }
         else {
@@ -718,12 +718,12 @@ static void stage3_draw(struct lctx *x)
         if (lvl) ld_fill(198, y + 2, (int)lvl, 8, (s3_solo >> t) & 1u ? LC_YELLOW : LC_GREEN);
     }
     line[0] = 0;
-    if (s3_recording()) ls_cat(line, 0, sizeof line, s3_punch_on ? "PUNCHING: RELEASE REC TO END" : "TAPING: PLAY TO FINISH");
+    if (s3_recording()) ls_cat(line, 0, sizeof line, s3_punch_on ? "PUNCHING: RELEASE " LBL_REC " TO END" : "TAPING: " LBL_PLAY " TO FINISH");
     else if (s3_punch_armed) ls_cat(line, 0, sizeof line, "PUNCH WAITS FOR THE BAR");
     else if (s3_arp_entry) ls_cat(line, 0, sizeof line, LEARN_PADS ? "TAP PATTERN ON PADS 9-16" : "GLO+KEYS 9-16: THE PATTERN");
     else if (s3_demo_phase) ls_cat(line, 0, sizeof line, s3_demo_phase == 1u ? "LISTEN: SOURCE ALONE" : "LISTEN: SHADOW ALONE");
     else if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
-    else ls_cat(line, 0, sizeof line, LEARN_PADS ? "REC+PLAY TAPE  PAD7 TRACK" : "REC+PLAY TAPE  SAVE UNDO");
+    else ls_cat(line, 0, sizeof line, LEARN_PADS ? LBL_REC "+" LBL_PLAY " TAPE  PAD7 TRACK" : LBL_REC "+" LBL_PLAY " TAPE  " LBL_SAVE " UNDO");
     ld_text(4, 166, line, 0, s3_recording() ? LC_RED : LC_AMBER);
     if (lesson_running()) {
         const struct lesson *l = &lessons[lesson_running() - 1u];

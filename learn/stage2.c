@@ -201,7 +201,7 @@ static void melody_finish(struct lctx *x)
     notes = song_track_notes(LT_KEYS, 0, 0);
     s2_take_valid = 1; s2_replay_which = 0;
     log_add(LOGK_TAKE, notes, 0, lsong.tempo, x->slow_percent < 100u, lesson_running(), s2_quant);
-    learn_notice(notes ? "TAKE DONE. REC: RAW / SNAP" : "NO NOTES IN THAT PASS", 1500);
+    learn_notice(notes ? "TAKE DONE. " LBL_REC ": RAW / SNAP" : "NO NOTES IN THAT PASS", 1500);
     send_log(); x->redraw = 1;
 }
 static void melody_requantise(void)
@@ -289,8 +289,8 @@ static void trainer_finish(struct lctx *x)
     before = (log_unlocked(UNLOCK_SWING) ? 1u : 0u) | (log_unlocked(UNLOCK_FILL) ? 2u : 0u);
     log_add(LOGK_RHYTHM, tr.hits, tr.misses, tr.tempo, x->slow_percent < 100u, lesson_running(), (pct & ~1u) | tr.offbeat);
     after = (log_unlocked(UNLOCK_SWING) ? 1u : 0u) | (log_unlocked(UNLOCK_FILL) ? 2u : 0u);
-    if ((after & ~before) & 1u) { learn_notice("SWING UNLOCKED! TRY K3", 2000); k = 2; lsyx_send(LCMD_UNLOCK, &k, 1); }
-    else if ((after & ~before) & 2u) { learn_notice("FILL UNLOCKED! TRY K4", 2000); k = 3; lsyx_send(LCMD_UNLOCK, &k, 1); }
+    if ((after & ~before) & 1u) { { char b[32]; unsigned q = ls_cat(b, 0, sizeof b, "SWING UNLOCKED! TRY "); ls_cat(b, q, sizeof b, LKN[2]); learn_notice(b, 2000); } k = 2; lsyx_send(LCMD_UNLOCK, &k, 1); }
+    else if ((after & ~before) & 2u) { { char b[32]; unsigned q = ls_cat(b, 0, sizeof b, "FILL UNLOCKED! TRY "); ls_cat(b, q, sizeof b, LKN[3]); learn_notice(b, 2000); } k = 3; lsyx_send(LCMD_UNLOCK, &k, 1); }
     else learn_notice(pct >= 80u ? (x->slow_percent < 100u ? "PASSED (SLOW: NO UNLOCK)" : "PASSED!") : "KEEP GOING", 1500);
     send_log();
     s2_set_big(pct >= 80u ? "PASS" : "MISS", pct, 1);
@@ -382,7 +382,7 @@ static void s2_encoder_edit(struct lctx *x, unsigned id, int delta)
     switch (id) {
     case 0: {
         unsigned t = S2_TRACK[s2_track], n;
-        if (s2_track == S2T_DRUMS) { learn_notice("DRUMS: EDIT+K5 PICKS THE PERC", 900); break; }
+        if (s2_track == S2T_DRUMS) { { char b[32]; unsigned q = ls_cat(b, 0, sizeof b, "DRUMS: " LBL_EDIT "+"); q = ls_cat(b, q, sizeof b, LKN[4]); ls_cat(b, q, sizeof b, " = PERC SOUND"); learn_notice(b, 900); } break; }
         n = learn_patch_count(trk[t].eng_req); if (!n) n = 1;
         s2_patch[s2_track] = (uint8_t)((s2_patch[s2_track] + n + (delta > 0 ? 1u : n - 1u)) % n);
         learn_bank_select(t, trk[t].eng_req, s2_patch[s2_track]);
@@ -670,7 +670,7 @@ static void stage2_draw(struct lctx *x)
     else if (tr.state == TS_SCORING) ls_cat(line, 0, sizeof line, tr.round ? "TAP THE PATTERN" : "TAP ON THE BEAT");
     else if (tr.state == TS_RESULT) ls_cat(line, 0, sizeof line, "ROUND DONE");
     else if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
-    else { n = ls_cat(line, 0, sizeof line, "ENV: TRAINER  ARP: LESSON "); ls_num(line, n, sizeof line, s2_lesson_pick + 1u); }
+    else { n = ls_cat(line, 0, sizeof line, LBL_ENV ": TRAINER  ARP: LESSON "); ls_num(line, n, sizeof line, s2_lesson_pick + 1u); }
     ld_text(4, 176, line, 0, tr.state == TS_SCORING ? LC_GREEN : LC_AMBER);
     /* the trainer's stats, or what is locked */
     line[0] = 0;
@@ -683,7 +683,7 @@ static void stage2_draw(struct lctx *x)
         const struct lesson *ln = &lessons[lesson_running() - 1u];
         n = ls_cat(line, 0, sizeof line, ln->title); n = ls_cat(line, n, sizeof line, "  ");
         n = ls_num(line, n, sizeof line, lesson_progress() + 1u); n = ls_cat(line, n, sizeof line, "/"); ls_num(line, n, sizeof line, ln->step_count);
-    } else if (!log_unlocked(UNLOCK_SWING)) ls_cat(line, 0, sizeof line, "SWING+FILL LOCKED: PASS TRAINER");
+    } else if (!log_unlocked(UNLOCK_SWING)) ls_cat(line, 0, sizeof line, "SWING+FILL LOCKED: TRAINER");
     else if (!log_unlocked(UNLOCK_FILL)) ls_cat(line, 0, sizeof line, "FILL LOCKED: TAP THE PATTERN");
     ld_text(4, 194, line, 0, tr.state != TS_IDLE ? LC_TEXT : lesson_running() ? LC_PURPLE : LC_PANEL);
     {

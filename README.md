@@ -13,7 +13,8 @@ every existing open SMK-37 firmware is built. GPL-3.0-only.
 | 4 Finish it | Stage | Scribe | eight sections queued by hand, transitions, energy, the song record |
 
 Plain SLOOP is still inside: **hold GLO + HOME for two seconds** to switch
-between LEARN and SLOOP, both ways. Each page's graduation (the last lesson,
+between LEARN and SLOOP, both ways (on the SMK-37: GLOBE + PATCH). GLO + SEQ
+shows the current page's controls on the screen; GLO + ARP shows your results. Each page's graduation (the last lesson,
 a whole loop, a take in key) says when the next page is ready; nothing is
 locked, so you can look ahead.
 

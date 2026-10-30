@@ -50,7 +50,7 @@ static char s4_hint[40]; static uint32_t s4_hint_until;
 
 static const char *const TYPE_NM[STY_COUNT] = {"INTRO", "VERSE", "PRE", "CHORUS", "BRIDGE", "BREAK", "OUTRO", "FREE"};
 static const char *const TRANS_NM[TRN_COUNT] = {"NONE", "DROP", "RISER", "FILL", "HAND-OFF"};
-static const uint32_t TYPE_PAD[STY_COUNT] = {0x101010, P_BLUE, 0x002818, P_ORANGE, P_PURPLE, P_WHITE, 0x101010, P_GREEN};
+static const uint32_t TYPE_PAD[STY_COUNT] = {0x404040, P_BLUE, 0x108050, P_ORANGE, P_PURPLE, P_WHITE, 0x404040, P_GREEN};
 #define LC_TEAL 0x0410
 static const uint16_t TYPE_RGB[STY_COUNT] = {LC_DIM, LC_BLUE, LC_TEAL, LC_ORANGE, LC_PURPLE, LC_TEXT, LC_DIM, LC_GREEN};
 static const uint8_t TYPE_ENERGY[STY_COUNT] = {2, 4, 5, 8, 3, 1, 2, 4};
@@ -180,7 +180,7 @@ static void apply_transition(struct lctx *x)
 static void queue_slot(struct lctx *x, unsigned slot, unsigned mode)
 {
     uint8_t p[2];
-    if (slot >= SEC_MAX || !s4_sec[slot].used) { learn_notice(LEARN_PADS ? "EMPTY SLOT: GLO+PAD TO STORE" : "EMPTY: GLO+KEY 9-16 STORES", 900); return; }
+    if (slot >= SEC_MAX || !s4_sec[slot].used) { learn_notice(LEARN_PADS ? "EMPTY SLOT: " LBL_GLO "+PAD TO STORE" : "EMPTY: " LBL_GLO "+KEY 9-16 STORES", 900); return; }
     s4_queued = (uint8_t)slot; s4_qmode = (uint8_t)mode;
     p[0] = (uint8_t)slot; p[1] = (uint8_t)mode; lsyx_send(LCMD_QUEUE, p, 2);
     if (s4_ghost_n && s4_ghost_pos < s4_ghost_n) s4_press_timing = (uint8_t)(s4_follow_pad ? 1u : (s4_bars_played >= LESSON_BARS ? 2u : 1u));
@@ -243,7 +243,7 @@ static void record_stop(struct lctx *x)
     secs = s4_elapsed / 1000u;
     log_add(LOGK_SONG, s4_rec_n, 0, lsong.tempo, x->slow_percent < 100u, lesson_running(), secs > 255u ? 255u : secs);
     lsyx_send(LCMD_REC, &p, 1);
-    learn_notice("SONG KEPT IN RAM. HOME AGAIN: DISCARD", 2000);
+    learn_notice("SONG KEPT IN RAM. " LBL_HOME " AGAIN: DISCARD", 2000);
     if (s4_ghost_n) lesson_finish(x);
     x->redraw = 1;
 }
@@ -321,7 +321,7 @@ static void stage4_pad(struct lctx *x, unsigned pad, unsigned velocity, unsigned
         if (pad < 8) slot_press(x, pad);
         else if (x->buttons & LB(LB_GLO)) store_slot(x, pad - 8u, s4_store_type);
         else if (s4_sec[pad - 8u].used) { s4_sec[pad - 8u].type = (uint8_t)((s4_sec[pad - 8u].type + 1u) % STY_COUNT); learn_notice(TYPE_NM[s4_sec[pad - 8u].type], 700); s4_cursor = (uint8_t)(pad - 8u); }
-        else learn_notice("GLO+PAD STORES HERE", 700);
+        else learn_notice(LBL_GLO "+PAD STORES HERE", 700);
     } else {
         s4_pad_down[pad] = 0;
         if (pad < 8) slot_release(x, pad);
@@ -383,7 +383,7 @@ static void stage4_control(struct lctx *x)
         x->redraw = 1;
     }
     if (b & LB(LB_REC)) {
-        if (s4_recording) learn_notice("HOME STOPS THE RECORD", 800);
+        if (s4_recording) learn_notice(LBL_HOME " STOPS THE RECORD", 800);
         else if (s4_passed_once || (s4_ghost_n && s4_perf_n)) { uint8_t p; s4_replay_which = !s4_replay_which; s4_replay_shown = 1; learn_notice(s4_replay_which ? "REPLAY: YOUR ORDER" : "REPLAY: GHOST ORDER", 800); p = s4_replay_which; lsyx_send(LCMD_REPLAY, &p, 1); }
         else record_start(x);
         x->redraw = 1;
@@ -461,7 +461,7 @@ static uint32_t stage4_pad_colour(unsigned pad)
     }
     slot = pad - 8u;
     if (s4_pad_down[pad]) return P_FULL(TYPE_PAD[s4_store_type]);
-    return s4_sec[slot].used ? P_DIM(TYPE_PAD[s4_sec[slot].type]) : 0x040404u;
+    return s4_sec[slot].used ? P_DIM(TYPE_PAD[s4_sec[slot].type]) : 0x101010u;
 }
 
 /* ---- the screen ---- */
@@ -511,13 +511,13 @@ static void stage4_draw(struct lctx *x)
     }
     n = ls_cat(line, 0, sizeof line, "STORE AS "); ls_cat(line, n, sizeof line, TYPE_NM[s4_store_type]);
     ld_text(4, 120, line, 0, TYPE_RGB[s4_store_type]);
-    n = ls_cat(line, 0, sizeof line, "K5 "); n = ls_cat(line, n, sizeof line, TRANS_NM[s4_trans]); n = ls_cat(line, n, sizeof line, "  ENERGY ");
+    n = ls_cat(line, 0, sizeof line, LKN[4]); n = ls_cat(line, n, sizeof line, " "); n = ls_cat(line, n, sizeof line, TRANS_NM[s4_trans]); n = ls_cat(line, n, sizeof line, "  ENERGY ");
     for (i = 0; i < 8u && n + 1u < sizeof line; i++) line[n++] = i < s4_energy ? '#' : '.'; line[n] = 0;
     ld_text(4, 138, line, 0, LC_AMBER);
-    ld_text(4, 156, LEARN_PADS ? "PAD: SLOT  GLO+PAD 9-16: STORE" : "GLO+KEY: SLOT  SAVE: STORE", 0, LC_PANEL);
+    ld_text(4, 156, LEARN_PADS ? "PAD: SLOT  " LBL_GLO "+PAD 9-16: STORE" : LBL_GLO "+KEY: SLOT  " LBL_SAVE ": STORE", 0, LC_PANEL);
     if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
-    else if (s4_recording) { n = ls_cat(line, 0, sizeof line, "RECORDING "); n = ls_num(line, n, sizeof line, s4_rec_n + 1u); ls_cat(line, n, sizeof line, " SECTIONS  HOME: STOP"); }
-    else { n = ls_cat(line, 0, sizeof line, "REC: RECORD   ARP: LESSON "); ls_num(line, n, sizeof line, s4_lesson_pick + 1u); }
+    else if (s4_recording) { n = ls_cat(line, 0, sizeof line, "RECORDING "); n = ls_num(line, n, sizeof line, s4_rec_n + 1u); ls_cat(line, n, sizeof line, " SECTIONS  " LBL_HOME ": STOP"); }
+    else { n = ls_cat(line, 0, sizeof line, LBL_REC ": RECORD   ARP: LESSON "); ls_num(line, n, sizeof line, s4_lesson_pick + 1u); }
     ld_text(4, 174, line, 0, s4_recording ? LC_RED : LC_AMBER);
     if (lesson_running()) {
         const struct lesson *l = &lessons[lesson_running() - 1u];

@@ -36,26 +36,27 @@ static void ld_dot(int x, int y, int r, uint16_t c)
 }
 
 /* a strip showing `keys` keys from `first_note`: white keys as boxes, black keys as short dark boxes above them;
- * lit keys cyan, bright ones (follow-me) white */
-static void ld_keymap(int y, int h, unsigned keys, unsigned first_note, uint32_t lit, uint32_t bright)
+ * state[k] 1 = lit (cyan), 2 = bright (white: follow-me) */
+static void ld_keymap(int y, int h, unsigned keys, unsigned first_note, const uint8_t *state)
 {
     static const uint8_t BLACK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
     unsigned k, whites = 0, wi = 0;
-    int ww;
+    int ww, x0;
     for (k = 0; k < keys; k++)
         if (!BLACK[(first_note + k) % 12u])
             whites++;
     if (!whites)
         return;
     ww = LD_W / (int)whites;
+    x0 = (LD_W - ww * (int)whites) / 2;
     ld_fill(0, y, LD_W, h, LC_BG);
     for (k = 0; k < keys; k++) {                  /* white keys first */
         unsigned n = first_note + k;
         if (BLACK[n % 12u])
             continue;
         {
-            int x = (int)wi * ww;
-            uint16_t c = (bright >> k) & 1u ? LC_TEXT : (lit >> k) & 1u ? LC_CYAN : LC_PANEL;
+            int x = x0 + (int)wi * ww;
+            uint16_t c = state[k] == 2u ? LC_TEXT : state[k] ? LC_CYAN : LC_PANEL;
             ld_fill(x + 1, y, ww - 2, h, c);
             if (n % 12u == 0u)                    /* a C: a dot at the bottom, the player's landmark */
                 ld_fill(x + ww / 2 - 1, y + h - 4, 3, 2, c == LC_PANEL ? LC_DIM : LC_BG);
@@ -70,13 +71,21 @@ static void ld_keymap(int y, int h, unsigned keys, unsigned first_note, uint32_t
             continue;
         }
         {
-            int x = (int)wi * ww - ww / 3;
-            uint16_t c = (bright >> k) & 1u ? LC_TEXT : (lit >> k) & 1u ? LC_CYAN : LC_BG;
-            ld_fill(x, y, (2 * ww) / 3, (h * 3) / 5, c);
+            int x = x0 + (int)wi * ww - ww / 3, bw = (2 * ww) / 3;
+            uint16_t c = state[k] == 2u ? LC_TEXT : state[k] ? LC_CYAN : LC_BG;
+            if (bw < 3) bw = 3;
+            ld_fill(x, y, bw, (h * 3) / 5, c);
             if (c == LC_BG)
-                ld_frame(x, y, (2 * ww) / 3, (h * 3) / 5, LC_DIM);
+                ld_frame(x, y, bw, (h * 3) / 5, LC_DIM);
         }
     }
+}
+
+/* a line of text on a filled bar across the screen (a prompt that cannot be missed) */
+static void ld_bar_text(int y, const char *s, uint16_t bar, uint16_t fg)
+{
+    ld_fill(0, y, LD_W, 18, bar);
+    ld_text(4, y + 1, s, 0, fg);
 }
 
 /* a small treble staff with one note (middle C = 60 on a ledger line below) */
