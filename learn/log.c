@@ -33,7 +33,7 @@ static void log_add(unsigned kind, unsigned hits, unsigned misses, unsigned temp
 static unsigned log_count(void) { return lg_count; }
 static const struct log_entry *log_get(unsigned i)
 {
-    if (i >= lg_count) return NULL;
+    if (i >= lg_count) return 0;
     return &lg_entries[(lg_head + LOG_MAX - 1 - i) % LOG_MAX];
 }
 static unsigned log_streak(void) { return lg_streak; }
