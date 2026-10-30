@@ -28,6 +28,7 @@ static struct {
     uint8_t perc_lane;             /* the PERC lane's sound: a drum lane (DL_CLAP, DL_RIM, ...) */
 } lsong;
 static const uint8_t SONG_LANE_DRUM[LANE_COUNT] = {DL_KICK, DL_SNARE, DL_HAT, DL_CLAP};
+static uint32_t lsong_rev;                     /* bumped by every render: Stage 3's shadows follow it */
 
 static uint16_t song_euclid(unsigned hits, unsigned steps, unsigned shift)
 {
@@ -102,6 +103,7 @@ static void song_steps_rest(track_t *t)           /* every step a REST (the synt
 }
 static void song_write_chords(void)
 {
+    lsong_rev++;
     track_t *t = &trk[LT_CHORDS];
     unsigned beat, k;
     song_track_setup(LT_CHORDS);
@@ -120,6 +122,7 @@ static void song_write_chords(void)
 }
 static void song_write_bass(void)
 {
+    lsong_rev++;
     track_t *t = &trk[LT_BASS];
     unsigned s, steps = song_steps();
     uint16_t kick = lsong.lane[LANE_KICK].mask;
@@ -150,6 +153,7 @@ static void song_write_bass(void)
 }
 static void song_write_drums(void)
 {
+    lsong_rev++;
     track_t *t = TDRUM;
     unsigned l, s, steps = song_steps();
     song_track_setup(LT_DRUMS);
