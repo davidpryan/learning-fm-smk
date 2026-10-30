@@ -161,9 +161,13 @@ jobs:
           ls -l install-site-$ver.zip site
           echo "::notice title=site files::$(ls site | tr '\n' ' ')"
           assets=$(find site -maxdepth 1 -type f \( -name '*.fwsc' -o -name '*.sha256' -o -name provenance.json \) | sort)
-          gh release create "$REL_VERSION" --target "$GITHUB_SHA" $assets install-site-$ver.zip \
-            --title "Learn firmware $ver" \
-            --notes "One firmware per device, four pages inside. Read docs/SAFETY.md and docs/FIRST-HARDWARE-TEST.md first. Install from the site (GitHub Pages, once enabled) or with SLOOP's installer: python3 sloop/tools/fm1_install.py <package>.fwsc (pip install mido python-rtmidi). Checksums in the .sha256 sidecars; provenance.json names the commit and the SLOOP upstream commit; install-site-$ver.zip is the site itself." 2>&1 | tee release.log
+          notes="One firmware per device, four pages inside. Read docs/SAFETY.md and docs/FIRST-HARDWARE-TEST.md first. Install from the site https://davidpryan.github.io/learning-fm-smk/ or with SLOOP's installer: python3 sloop/tools/fm1_install.py <package>.fwsc (pip install mido python-rtmidi). Checksums in the .sha256 sidecars; provenance.json names the commit and the SLOOP upstream commit; install-site-$ver.zip is the site itself."
+          if gh release view "$REL_VERSION" > /dev/null 2>&1; then   # (the release exists: the assets are replaced)
+            gh release upload "$REL_VERSION" --clobber $assets install-site-$ver.zip 2>&1 | tee release.log
+          else
+            gh release create "$REL_VERSION" --target "$GITHUB_SHA" $assets install-site-$ver.zip \
+              --title "Learn firmware $ver" --notes "$notes" 2>&1 | tee release.log
+          fi
           st=${PIPESTATUS[0]}
           [ "$st" = 0 ] || { echo "::error title=release::$(tail -c 1500 release.log | tr '\n' ' ')"; exit "$st"; }
       - uses: actions/configure-pages@v5
