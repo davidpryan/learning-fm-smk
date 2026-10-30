@@ -138,17 +138,19 @@ jobs:
           path: pkgs
       - name: Site
         run: |
-          set +e
-          {
-            ver="${REL_VERSION#v}"
-            find pkgs -type f | head -20
-            elite=$(find pkgs/learn-elite -name '*.fwsc' | head -1)
-            fm1=$(find pkgs/learn-fm1 -name '*.fwsc' | head -1)
-            python3 tools/make_site.py "$ver" site "$elite" "$fm1" && cp pkgs/learn-*/build-*.log site/ ; ls -l site
-          } > site.log 2>&1
-          st=$?
+          ver="${REL_VERSION#v}"
+          find pkgs -type f | head -20
+          elite=$(find pkgs/learn-elite -name '*.fwsc' | head -1)
+          fm1=$(find pkgs/learn-fm1 -name '*.fwsc' | head -1)
+          echo "::notice title=packages::elite=$elite fm1=$fm1"
+          if ! python3 tools/make_site.py "$ver" site "$elite" "$fm1" > site.log 2>&1; then
+            cat site.log
+            echo "::error title=site::$(tail -c 1500 site.log | tr '\n' ' ')"
+            exit 1
+          fi
           cat site.log
-          [ "$st" = 0 ] || { echo "::error title=site::$(tail -c 1500 site.log | tr '\n' ' ')"; exit "$st"; }
+          cp pkgs/learn-*/build-*.log site/ || true
+          echo "::notice title=site files::$(ls site | tr '\n' ' ')"
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
