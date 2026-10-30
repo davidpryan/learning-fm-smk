@@ -93,7 +93,7 @@ def diff_tree(board, stage, tree=None):
         elif rel == "sdk/Build.ps1":
             # Removed lines may also be the two bookkeeping lines of the replaced Windows hash loop.
             extra_removed = {"        $name = $entry.Name", "        $file = Join-Path $Toolchain $name"}
-            extra_added = {"    '-Wno-invalid-noreturn','-fno-common','-fallow-pointer-null','-fprefer-gnu-section',", "        '--sort-common',", "        '--start-group',"}
+            extra_added = set()
             ok = (os.path.isfile(os.path.join(tree, "LINUX-BUILD-PATCH.txt")) and all(BUILD_PS1_ALLOWED.search(l) or l in extra_added for l in added)
                   and all(BUILD_PS1_ALLOWED.search(l) or l in extra_removed for l in removed))
         else:

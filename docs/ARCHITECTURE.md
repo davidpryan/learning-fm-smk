@@ -67,10 +67,8 @@ written by the learn layer in this version.
   the Windows kit the vendor script expects, all handled by
   `tools/overlay.py --host-os linux` on the assembled copy and allowed by
   the safety audit: tool names (`pi32v2/bin/ld`, `common/bin/objcopy`)
-  reached through a shim `bin/`; no gold LTO plugin on Linux, so `-flto`
-  and the `--plugin-opt` link options are dropped (the vendor recipe already
-  builds its UI and board units without LTO; the rest loses cross-unit
-  inlining only); the Windows-binary hash loop becomes a presence check,
+  reached through a shim `bin/`; the gold LTO plugin is `common/bin/LLVMgold.so`,
+  so the vendor's LTO compile and link recipe is kept verbatim; the Windows-binary hash loop becomes a presence check,
   with the tarball pinned by SHA-256 in `tools/ci/jieli-linux.sha256` and
   the compiler version verified; Build.ps1's hash of itself is skipped
   (every other SDK file is still verified); three `\` path assumptions use
