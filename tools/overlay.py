@@ -56,7 +56,44 @@ def replace_once(path, pattern, repl):
         sys.exit(f"overlay: pattern matched {n} times (expected 1) in {path}: {pattern}")
     _write(path, new)
 
-def assemble(board, stage, out, model="elite"):
+def patch_build_for_linux(out):
+    """Let the vendor Build.ps1 run under pwsh on Linux with JieLi's Linux
+    toolchain (the same clang 4.0.1 for pi32v2, published as a tarball).
+    Only tool file names and the Windows-binary hash check change; every
+    SDK-file hash check, the ELF/SRAM/heap checks and the packager stay.
+    The toolchain's own hashes are checked against tools/ci/jieli-linux.sha256
+    by the workflow before this script runs."""
+    bp = os.path.join(out, "sdk", "Build.ps1")
+    src = _read(bp)
+    nl = "\r\n" if "\r\n" in src else "\n"
+    reps = [
+        ("'clang.exe'", "'clang'"), ("'llvm-nm.exe'", "'llvm-nm'"), ("'llvm-objcopy.exe'", "'llvm-objcopy'"),
+        ("'pi32v2-ld.exe'", "'pi32v2-ld'"), ("'LLVMgold.dll'", "'LLVMgold.so'"),
+    ]
+    for a, b in reps:
+        if a not in src:
+            sys.exit(f"overlay: linux patch anchor missing in Build.ps1: {a}")
+        src = src.replace(a, b)
+    # The external-toolchain block hashes the Windows binaries; replace that one
+    # block with a presence check (the workflow verified the tarball's hashes).
+    start = src.find("if ($manifest.external_toolchain) {")
+    end = src.find("$synth = Get-Content", start)
+    if start < 0 or end < 0:
+        sys.exit("overlay: linux patch: external_toolchain block not found")
+    block = ("if ($manifest.external_toolchain) {" + nl +
+             "    foreach ($required in @('bin/clang','bin/pi32v2-ld','bin/LLVMgold.so','bin/llvm-nm','bin/llvm-objcopy')) {" + nl +
+             "        if (!(Test-Path -LiteralPath (Join-Path $Toolchain $required))) { throw \"Linux toolchain is missing $required\" }" + nl +
+             "    }" + nl + "}" + nl)
+    src = src[:start] + block + src[end:]
+    # synth.json pins the Windows clang hash; on Linux the matching compiler is the tarball verified by CI.
+    src = src.replace("$synth.pi32_compiler_sha256 -cne $manifest.external_toolchain.files.'bin/clang' -or" + nl, "")
+    # Install location message.
+    src = src.replace("throw 'Install JieLi Windows toolchain 2.5.3", "throw 'Install the JieLi Linux toolchain")
+    _write(bp, src)
+    with open(os.path.join(out, "LINUX-BUILD-PATCH.txt"), "w", encoding="utf-8") as fh:
+        fh.write("sdk/Build.ps1 patched for Linux: tool names without .exe, LLVMgold.so, toolchain presence check instead of Windows binary hashes.\n")
+
+def assemble(board, stage, out, model="elite", host_os="windows"):
     b = BOARDS[board]
     vendor = os.path.join(ROOT, "vendor", b["vendor"])
     if not os.path.isfile(os.path.join(vendor, "app", "screen.c")):
@@ -106,8 +143,10 @@ def assemble(board, stage, out, model="elite"):
     else:
         replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_8[0-9]{6}"[ \t]*\r?$', f'#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_{number}"')
         replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_8[0-9]{6}"[ \t]*\r?$', f'#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_{number}"')
+    if host_os == "linux":
+        patch_build_for_linux(out)
     with open(os.path.join(out, "LEARN-BUILD.txt"), "w", encoding="utf-8") as fh:
-        fh.write(f"board={board}\nstage={stage}\nname={STAGE_NAMES[stage]}\nversion={version}\nmodel={model if board == 'smk37' else '-'}\n")
+        fh.write(f"board={board}\nstage={stage}\nname={STAGE_NAMES[stage]}\nversion={version}\nmodel={model if board == 'smk37' else '-'}\nhost_os={host_os}\n")
     print(f"overlay: {board} stage {stage} -> {os.path.relpath(out, ROOT)}")
 
 def main():
@@ -116,16 +155,17 @@ def main():
     ap.add_argument("--stage", type=int, choices=[1, 2, 3, 4])
     ap.add_argument("--out")
     ap.add_argument("--model", choices=MODELS, default="elite", help="SMK-37 model (default elite)")
+    ap.add_argument("--host-os", choices=("windows", "linux"), default="windows", help="where the vendor Build.ps1 will run")
     ap.add_argument("--all", action="store_true")
     a = ap.parse_args()
     if a.all:
         for board in BOARDS:
             for stage in (1, 2, 3, 4):
-                assemble(board, stage, os.path.join(ROOT, "build", "trees", f"{board}-s{stage}"), a.model)
+                assemble(board, stage, os.path.join(ROOT, "build", "trees", f"{board}-s{stage}"), a.model, a.host_os)
         return
     if not a.board or not a.stage:
         ap.error("--board and --stage, or --all")
-    assemble(a.board, a.stage, a.out or os.path.join(ROOT, "build", "trees", f"{a.board}-s{a.stage}"), a.model)
+    assemble(a.board, a.stage, a.out or os.path.join(ROOT, "build", "trees", f"{a.board}-s{a.stage}"), a.model, a.host_os)
 
 if __name__ == "__main__":
     main()

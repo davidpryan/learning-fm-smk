@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception
-# Device firmware: builds every (board, stage) pair with M-VAVE's own
-# Build.ps1 and the JieLi 2.5.3 toolchain, exactly as the official open
-# firmware is built. Each package gets a SHA-256 sidecar and a provenance
-# file. Runs on main pushes, tags and manual dispatch (the host CI already
-# gates pull requests, and the toolchain install is slow).
+# Device firmware on Ubuntu: M-VAVE's own Build.ps1 (under pwsh) with JieLi's
+# Linux toolchain, the same clang 4.0.1 for pi32v2 that the Windows kit
+# ships, published by JieLi as a plain tarball. No installer, no secrets.
+# tools/overlay.py --host-os linux adjusts only tool file names in the
+# assembled copy of Build.ps1 (audited); every SDK hash check stays on.
 #
-# Toolchain: see tools/ci/Install-Toolchain.ps1. If the silent installer
-# does not work on hosted runners, set the JIELI_TOOLCHAIN_ZIP_URL secret
-# or use a self-hosted Windows runner labelled "jieli".
+# The toolchain tarball is pinned by SHA-256 in tools/ci/jieli-linux.sha256.
+# On the very first run that file is empty: the job prints the hash and
+# fails; commit the hash and re-run.
 name: firmware
 on:
   push:
@@ -18,8 +18,8 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: windows-latest
-    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -27,7 +27,6 @@ jobs:
         stage: [1, 2, 3, 4]
         model: [elite]
         include:
-          # The SMK-37 Pro shares the source; build it too so Pro owners get a package.
           - { board: smk37, stage: 1, model: pro }
           - { board: smk37, stage: 2, model: pro }
           - { board: smk37, stage: 3, model: pro }
@@ -37,32 +36,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
           persist-credentials: false
-      - name: Lessons and tree
-        shell: bash
+      - name: Lessons, tree, audit
         run: |
           python3 tools/make_lessons.py
-          python3 tools/overlay.py --board ${{ matrix.board }} --stage ${{ matrix.stage }} --model ${{ matrix.model }} --out build/trees/$PAIR
+          python3 tools/overlay.py --board ${{ matrix.board }} --stage ${{ matrix.stage }} --model ${{ matrix.model }} --host-os linux --out build/trees/$PAIR
           python3 tools/audit_safety.py --tree build/trees/$PAIR
       - name: Toolchain cache
         id: cache
         uses: actions/cache@v4
         with:
-          path: C:\JL\pi32
-          key: jieli-2.5.3-${{ runner.os }}
-      - name: Install JieLi toolchain
-        if: steps.cache.outputs.cache-hit != 'true'
-        timeout-minutes: 8
-        shell: pwsh
-        env:
-          JIELI_TOOLCHAIN_ZIP_URL: ${{ secrets.JIELI_TOOLCHAIN_ZIP_URL }}
-          JIELI_INSTALLER_SHA256: ${{ vars.JIELI_INSTALLER_SHA256 }}
-        run: tools/ci/Install-Toolchain.ps1
-      - name: Toolchain path (cached)
-        if: steps.cache.outputs.cache-hit == 'true'
-        shell: pwsh
-        run: 'Write-Output "FM1_PI32_TOOLCHAIN=C:\JL\pi32" >> $env:GITHUB_ENV'
+          path: ~/.jieli
+          key: jieli-linux-${{ hashFiles('tools/ci/jieli-linux.sha256') }}
+      - name: JieLi Linux toolchain
+        run: tools/ci/get_linux_toolchain.sh ~/.jieli
       - name: Build firmware (FM-1)
         if: matrix.board == 'fm1'
         shell: pwsh
@@ -74,10 +61,8 @@ jobs:
         working-directory: build/trees/${{ env.PAIR }}
         run: ./sdk/Build.ps1 -Model ${{ matrix.model }} -FirmwareOnly -Toolchain $env:FM1_PI32_TOOLCHAIN
       - name: Collect, hash, provenance
-        shell: bash
         run: python3 tools/collect_packages.py --board ${{ matrix.board }} --stage ${{ matrix.stage }} --model ${{ matrix.model }} --out dist
       - name: Verify
-        shell: bash
         run: python3 tools/verify_release.py dist
       - uses: actions/upload-artifact@v4
         with:

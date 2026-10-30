@@ -132,11 +132,15 @@ def main():
         body.append('<div class="grid">')
         for e in entries:
             body.append(f'<div class="card"><h3>{e["name"]} <span class="small">for the {e["device"]}</span></h3>' + ('<p class="small">Pro and Elite packages carry different update identities; the loader only installs the one for the model you confirm.</p>' if e["board"].startswith("smk37") else ""))
+            wb = "https://open.m-vave.com/fm1-workbench" if e["board"] == "fm1" else "https://open.m-vave.com/smk37-workbench"
             if e["install"]:
                 body.append(f'<p><a class="btn" href="{e["install"]}">Open the {e["device"]} installer</a></p>')
                 body.append('<p class="small">Desktop Chrome or Edge, USB cable, allow MIDI/SysEx. The page is M-VAVE\'s own workbench, built from this release\'s source, with this package embedded.</p>')
+            elif e["pkg"]:
+                body.append(f'<p><a class="btn" href="../install/{e["base"]}/{e["base"]}.fwsc" download>Download the {e["device"]} package</a> <a class="btn" href="{wb}" target="_blank" rel="noopener">Open M-VAVE\'s workbench</a></p>')
+                body.append('<p class="small">In the workbench (desktop Chrome or Edge, USB cable): back up, then Device update and choose the downloaded .fwsc file. Restore factory is on the same page.</p>')
             else:
-                body.append('<p><a class="btn off" href="#">Installer: not released yet</a></p><p class="small">Builds appear here after the first tagged release.</p>')
+                body.append('<p><a class="btn off" href="#">Package: not released yet</a></p><p class="small">Builds appear here after the first tagged release.</p>')
             if e["pkg"]:
                 body.append(f'<p class="small">Package: <a href="../install/{e["base"]}/{e["base"]}.fwsc">{e["base"]}.fwsc</a> · <a href="../install/{e["base"]}/{e["base"]}.fwsc.sha256">sha256</a> · <a href="../install/{e["base"]}/{e["base"]}-source.tar.gz">source</a> · <a href="../install/{e["base"]}/{e["base"]}.provenance.json">provenance</a></p>')
                 body.append(f'<pre>sha256: {e["sha"]}</pre>')
@@ -144,7 +148,7 @@ def main():
             body.append('</div>')
         body.append('</div>')
         body.append('<h2>Install, step by step</h2><ol>'
-                    '<li>Open the installer link above in desktop Chrome or Edge. Plug the device in over USB and switch it on.</li>'
+                    '<li>Download the package for the device you hold, check its SHA-256 against the sidecar, and open M-VAVE\'s workbench for that device in desktop Chrome or Edge. Plug the device in over USB and switch it on.</li>'
                     '<li>In the workbench, <strong>back up</strong> projects, voice groups A-D and samples (Projects &amp; sounds). Keep the files.</li>'
                     '<li>Choose <strong>Device update</strong>. Coming from stock firmware the workbench uses force mode and asks you to confirm the physical model. Confirm only the model you are holding.</li>'
                     '<li>Keep USB connected until the firmware and sample checks finish and the device restarts. The screen shows the stage page.</li>'
@@ -153,7 +157,7 @@ def main():
         body.append('<h2>Controls</h2>' + md_to_html(read_doc(f"stage{stage}.md")))
         with open(os.path.join(out, "pairs", f"stage{stage}.html"), "w", encoding="utf-8") as fh:
             fh.write(page(f"Stage {stage}: {smk} + {fm1}", "\n".join(body), depth=1))
-        ready = all(e["installer"] for e in entries if e["board"] != "smk37p")
+        ready = all(e["pkg"] for e in entries if e["board"] != "smk37p")
         cards.append(f'<div class="card"><h3><a href="pairs/stage{stage}.html">Stage {stage}: {tagline}</a></h3><p><span class="tag">{smk} · SMK-37 Elite / Pro</span><span class="tag">{fm1} · FM-1</span></p><p>{html.escape(blurb)}</p><p class="small">{"Installers ready" if ready else "Not released yet"}</p></div>')
     # lessons
     lessons_dir = os.path.join(ROOT, "build", "lessons")

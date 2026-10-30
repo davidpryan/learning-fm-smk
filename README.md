@@ -20,9 +20,9 @@ before installing anything.** Unofficial; not affiliated with M-VAVE.
 ## Get the firmware
 
 Each tagged release publishes, for every pair and board (SMK-37 Elite, SMK-37 Pro, FM-1): the `.fwsc`
-package, its SHA-256, a provenance file (source commits, build time), the
-installer page (the vendor workbench with the package embedded, with
-Restore factory built in) and the corresponding source archive. The install
+package, its SHA-256, a provenance file (source commits, build time) and the corresponding source
+archive. Install with M-VAVE's hosted workbench (open.m-vave.com), which also
+has Restore factory. The install
 site (`pages` workflow, GitHub Pages) has one page per pair.
 
 ## Build and test on any machine
@@ -35,9 +35,9 @@ for t in build/trees/*; do tools/host_build.sh "$t"; done   # native build + sim
 python3 tools/audit_safety.py              # no Flash writes, only the reviewed hooks
 tools/device_syntax_check.sh build/trees/smk37-s4           # device-header syntax + sizes
 ```
-Device packages need the JieLi 2.5.3 Windows toolchain and the vendor
-`sdk/Build.ps1`; the `firmware` workflow does this on `windows-latest`
-(see `tools/ci/Install-Toolchain.ps1` for the toolchain options). See
+Device packages are built by the vendor `sdk/Build.ps1` (under `pwsh`) with
+JieLi's pi32v2 clang; the `firmware` workflow does this on Ubuntu with
+JieLi's Linux toolchain tarball, pinned by SHA-256. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Layout

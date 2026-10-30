@@ -60,8 +60,14 @@ written by the learn layer in this version.
 * Host (any OS with clang/gcc): `tools/overlay.py --board smk37 --stage 1`
   then `tools/host_build.sh build/trees/smk37-s1`. This links the learn
   layer against the vendor browser engine and runs the simulator tests.
-* Device: the vendor's `sdk/Build.ps1` with the JieLi 2.5.3 Windows
-  toolchain, exactly as for the official open firmware. CI does this on
-  `windows-latest`; see `.github/workflows/firmware.yml` and
-  `tools/ci/Install-Toolchain.ps1`. Releases add the complete browser
-  workbench (the installer page) with `build.bat --package`.
+* Device: the vendor's `sdk/Build.ps1`, run under `pwsh` on Ubuntu with
+  JieLi's Linux toolchain (the same clang 4.0.1 for pi32v2 the Windows kit
+  ships, published as a tarball). `tools/overlay.py --host-os linux`
+  changes only tool file names in the assembled copy of Build.ps1 and
+  swaps the Windows-binary hash check for a presence check; the toolchain
+  tarball itself is pinned by SHA-256 in `tools/ci/jieli-linux.sha256` and
+  every SDK-file hash check stays on. See `.github/workflows/firmware.yml`.
+  The vendor's embedded-installer HTML build is Windows-only, so releases
+  ship `.fwsc` packages for M-VAVE's hosted workbench instead. On a Windows
+  PC with the JieLi 2.5.3 kit, the unpatched vendor build (`build.bat`)
+  works on any assembled tree too.

@@ -21,7 +21,7 @@ What *can* go wrong, and what to do:
 | Wrong model package (Elite vs Pro, FM-1 vs SMK) | low | The update identity in each package names the model; the loader asks you to confirm the physical model and refuses a mismatch. Only install the package named for the device in your hands. |
 | Lost projects, voices or samples | medium if you skip the backup | Back up in the workbench first (Projects & sounds). Learn firmware uses the same project format but do not rely on it. |
 | A bug in the learn layer freezes the screen | possible, it is new code | Audio and MIDI keep running on the engine's own tasks. Power-cycle. Hold SHIFT+HOME (SMK) or GLO+HOME (FM-1) two seconds to return to the stock UI, which is still inside the firmware. |
-| Tampered download | low | Every package ships with a SHA-256 sidecar and a provenance file naming the exact source commit. `sha256sum -c name.fwsc.sha256`. The installer page you open is itself built from that release's source. |
+| Tampered download | low | Every package ships with a SHA-256 sidecar and a provenance file naming the exact source commit. `sha256sum -c name.fwsc.sha256`. Install only through M-VAVE's workbench, which checks the package before writing. |
 
 ## Before every install
 
@@ -34,8 +34,8 @@ What *can* go wrong, and what to do:
 
 ## Going back to stock
 
-Every installer page has M-VAVE's **Restore factory** function, which uses
-the unmodified official package (FM-1 V15 / SMK-37 V16) from the SDK. The
+M-VAVE's workbench (open.m-vave.com) has a **Restore factory** function
+that uses the unmodified official package (FM-1 V15 / SMK-37 V16). The
 stock M-VAVE updater also works. Your Flash calibration and Bluetooth keys
 are untouched by this project, so the stock firmware comes back complete.
 

@@ -21,7 +21,9 @@ FORBIDDEN = [
     r"\bmalloc\b", r"\bcalloc\b", r"\brealloc\b", r"\bfree\s*\(", r"\bprintf\b", r"\bsprintf\b",
     r"\bfm1_device_recovery\b", r"\bfm1_flash_invalidate\b",
 ]
-ALLOWED_DIFF = {"app/screen.c", "app/transfer.c", "app/midi_router.c", "app/smk37_controls.c", "app/version.h"}
+ALLOWED_DIFF = {"app/screen.c", "app/transfer.c", "app/midi_router.c", "app/smk37_controls.c", "app/version.h", "sdk/Build.ps1"}
+# The Linux build patch may only touch these things in sdk/Build.ps1.
+BUILD_PS1_ALLOWED = re.compile(r"clang|llvm-nm|llvm-objcopy|pi32v2-ld|LLVMgold|external_toolchain|Linux toolchain|Test-Path|required|\}|\{|^\s*$|pi32_compiler_sha256|JieLi")
 
 def scan_learn():
     bad = 0
@@ -63,7 +65,7 @@ def diff_tree(board, stage, tree=None):
     v = _files(vendor, skip)
     t = _files(tree, skip)
     for rel in sorted(set(t) - set(v)):
-        if rel not in ("LEARN-BUILD.txt",):
+        if rel not in ("LEARN-BUILD.txt", "LINUX-BUILD-PATCH.txt"):
             print(f"UNEXPECTED FILE {board}-s{stage}: {rel}")
             bad += 1
     for rel in sorted(set(v) - set(t)):
@@ -87,6 +89,11 @@ def diff_tree(board, stage, tree=None):
                 removed.append(line[1:])
         if rel == "app/version.h":
             ok = all(("FM1_RELEASE_VERSION" in l or "FM1_UPDATE_PRODUCT" in l or not l.strip()) for l in added + removed)
+        elif rel == "sdk/Build.ps1":
+            # Removed lines may also be the two bookkeeping lines of the replaced Windows hash loop.
+            extra_removed = {"        $name = $entry.Name", "        $file = Join-Path $Toolchain $name"}
+            ok = (os.path.isfile(os.path.join(tree, "LINUX-BUILD-PATCH.txt")) and all(BUILD_PS1_ALLOWED.search(l) for l in added)
+                  and all(BUILD_PS1_ALLOWED.search(l) or l in extra_removed for l in removed))
         else:
             ok = not removed and all(("learn_" in l and "extern" in l) for l in added)
         if not ok:
