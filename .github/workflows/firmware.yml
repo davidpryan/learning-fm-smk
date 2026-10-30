@@ -149,19 +149,23 @@ jobs:
           st=$?
           cat site.log
           [ "$st" = 0 ] || { echo "::error title=site::$(tail -c 1500 site.log | tr '\n' ' ')"; exit "$st"; }
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deploy
-        uses: actions/deploy-pages@v4
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ver="${REL_VERSION#v}"
-          gh release create "$REL_VERSION" --target "$GITHUB_SHA" site/*.fwsc site/*.sha256 site/provenance.json \
+          (cd site && zip -qr ../install-site-$ver.zip .)
+          gh release create "$REL_VERSION" --target "$GITHUB_SHA" site/*.fwsc site/*.sha256 site/provenance.json install-site-$ver.zip \
             --title "Learn firmware $ver" \
-            --notes "One firmware per device, four pages. Install from the site: ${{ steps.deploy.outputs.page_url }} — read docs/SAFETY.md first. Checksums in the .sha256 sidecars; provenance.json names the commit and the SLOOP upstream commit."
+            --notes "One firmware per device, four pages inside. Read docs/SAFETY.md and docs/FIRST-HARDWARE-TEST.md first. Install from the site (GitHub Pages, once enabled) or with SLOOP's installer: python3 sloop/tools/fm1_install.py <package>.fwsc (pip install mido python-rtmidi). Checksums in the .sha256 sidecars; provenance.json names the commit and the SLOOP upstream commit; install-site-$ver.zip is the site itself."
+      - uses: actions/configure-pages@v5
+        continue-on-error: true   # Pages must be enabled once in the repository settings (Source: GitHub Actions)
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        continue-on-error: true
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
