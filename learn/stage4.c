@@ -180,7 +180,7 @@ static void apply_transition(struct lctx *x)
 static void queue_slot(struct lctx *x, unsigned slot, unsigned mode)
 {
     uint8_t p[2];
-    if (slot >= SEC_MAX || !s4_sec[slot].used) { learn_notice(LEARN_PADS ? "EMPTY SLOT: " LBL_GLO "+PAD TO STORE" : "EMPTY: " LBL_GLO "+KEY 9-16 STORES", 900); return; }
+    if (slot >= SEC_MAX || !s4_sec[slot].used) { learn_notice(LEARN_PADS ? "EMPTY: " LBL_GLO "+PAD 9-16 STORES" : "EMPTY: " LBL_GLO "+KEY 9-16 STORES", 900); return; }
     s4_queued = (uint8_t)slot; s4_qmode = (uint8_t)mode;
     p[0] = (uint8_t)slot; p[1] = (uint8_t)mode; lsyx_send(LCMD_QUEUE, p, 2);
     if (s4_ghost_n && s4_ghost_pos < s4_ghost_n) s4_press_timing = (uint8_t)(s4_follow_pad ? 1u : (s4_bars_played >= LESSON_BARS ? 2u : 1u));
@@ -243,7 +243,7 @@ static void record_stop(struct lctx *x)
     secs = s4_elapsed / 1000u;
     log_add(LOGK_SONG, s4_rec_n, 0, lsong.tempo, x->slow_percent < 100u, lesson_running(), secs > 255u ? 255u : secs);
     lsyx_send(LCMD_REC, &p, 1);
-    learn_notice("SONG KEPT IN RAM. " LBL_HOME " AGAIN: DISCARD", 2000);
+    learn_notice("SONG KEPT. " LBL_HOME " AGAIN: DISCARD", 2000);
     if (s4_ghost_n) lesson_finish(x);
     x->redraw = 1;
 }
@@ -514,11 +514,13 @@ static void stage4_draw(struct lctx *x)
     n = ls_cat(line, 0, sizeof line, LKN[4]); n = ls_cat(line, n, sizeof line, " "); n = ls_cat(line, n, sizeof line, TRANS_NM[s4_trans]); n = ls_cat(line, n, sizeof line, "  ENERGY ");
     for (i = 0; i < 8u && n + 1u < sizeof line; i++) line[n++] = i < s4_energy ? '#' : '.'; line[n] = 0;
     ld_text(4, 138, line, 0, LC_AMBER);
-    ld_text(4, 156, LEARN_PADS ? "PAD: SLOT  " LBL_GLO "+PAD 9-16: STORE" : LBL_GLO "+KEY: SLOT  " LBL_SAVE ": STORE", 0, LC_PANEL);
+    ld_text(4, 156, LEARN_PADS ? "PAD: SLOT  " LBL_GLO "+PAD 9-16 STORE" : LBL_GLO "+KEY: SLOT  " LBL_SAVE ": STORE", 0, LC_DIM);
     if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
     else if (s4_recording) { n = ls_cat(line, 0, sizeof line, "RECORDING "); n = ls_num(line, n, sizeof line, s4_rec_n + 1u); ls_cat(line, n, sizeof line, " SECTIONS  " LBL_HOME ": STOP"); }
-    else { n = ls_cat(line, 0, sizeof line, LBL_REC ": RECORD   ARP: LESSON "); ls_num(line, n, sizeof line, s4_lesson_pick + 1u); }
+    else ls_cat(line, 0, sizeof line, s4_active == S4_NONE ? (LEARN_PADS ? LBL_GLO "+PAD 9-16: STORE LOOP" : LBL_GLO "+KEY 9-16: STORE LOOP")
+                                      : (LEARN_PADS ? "PAD 1-8: NEXT SECTION" : LBL_GLO "+KEY 1-8: NEXT SECTION"));
     ld_text(4, 174, line, 0, s4_recording ? LC_RED : LC_AMBER);
+    if (!ls && !s4_recording && !lesson_running()) ld_text(4, 192, LBL_REC ": RECORD THE SONG", 0, LC_DIM);
     if (lesson_running()) {
         const struct lesson *l = &lessons[lesson_running() - 1u];
         n = ls_cat(line, 0, sizeof line, l->title); n = ls_cat(line, n, sizeof line, " "); n = ls_num(line, n, sizeof line, lesson_progress() + 1u); n = ls_cat(line, n, sizeof line, "/"); ls_num(line, n, sizeof line, l->step_count);

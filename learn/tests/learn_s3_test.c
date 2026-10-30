@@ -36,6 +36,7 @@ int main(int argc, char **argv)
     for (i = 0; i < NE; i++) panel.enc[i] = (uint8_t)i, panel.dir[i] = 1;
     layers_init(); host_tracks_init(); go_home(); ui.force = 1; frame();
     hold_both(1700);
+    tap(B_ENV); tap(B_ENV);                       /* (the welcome screen: the first press dismisses it) */
     tap(B_SEQ); frames(2); tap(B_SEQ); frames(2);
     check(learn_page() == 3, "page 3");
     check(trk[LT_CHORDS].step[0].n == 3, "the loop from page 2 is there: chords held");

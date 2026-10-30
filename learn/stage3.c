@@ -279,7 +279,7 @@ static void take_capture(struct lctx *x)
         lesson_step_done(notes >= need && score >= (ls->target ? ls->target : 80u) && !s3_rec_slow, score);
     }
     p[0] = LT_KEYS; p[1] = 1; p[2] = s3_take_count; lsyx_send(LCMD_TRACK, p, 3);
-    if (score >= 80u && notes >= 4u && !s3_rec_slow && !log_unlocked(UNLOCK_STAGE4)) { log_unlock(UNLOCK_STAGE4); learn_notice(LEARN_STAGE > 3 ? "A TAKE IN KEY! SEQ: PAGE 4 IS READY" : "A TAKE IN KEY!", 2500); }
+    if (score >= 80u && notes >= 4u && !s3_rec_slow && !log_unlocked(UNLOCK_STAGE4)) { log_unlock(UNLOCK_STAGE4); learn_notice(LEARN_STAGE > 3 ? "A TAKE IN KEY! SEQ: PAGE 4" : "A TAKE IN KEY!", 2500); }
     else learn_notice(s3_rec_slow ? "TAKE SAVED (SLOW)" : "TAKE SAVED", 900);
     render_melody_shadow();
     x->redraw = 1;
@@ -369,7 +369,7 @@ static void demo_start(struct lctx *x, unsigned rule)
     if (!s3_sh[id].used || s3_sh[id].rule != rule || !song_playing()) { x->redraw = 1; return; }
     s3_demo_src = SRC_TRACK[id]; s3_demo_shadow = (uint8_t)(id == SRC_MELODY ? LT_KEYS : id == SRC_CHORDS ? LT_CHORDS : LT_DRUMS);
     solo_clear(); solo_set(s3_demo_src, 1); s3_demo_phase = 1; s3_demo_until = x->now + slow_ms(2400, x);
-    learn_notice(id == SRC_MELODY ? "LISTEN: THE TAKE AND ITS SHADOW" : "SOURCE ALONE...", 1200); x->redraw = 1;
+    learn_notice(id == SRC_MELODY ? "LISTEN: TAKE, THEN SHADOW" : "SOURCE ALONE...", 1200); x->redraw = 1;
 }
 static void demo_poll(struct lctx *x)
 {
@@ -393,7 +393,7 @@ static void pick_rule(struct lctx *x, unsigned rule)
     char line[32];
     unsigned n, source;
     uint8_t p[2];
-    if (!s3_src_armed) { learn_notice(LEARN_PADS ? "PICK A SOURCE FIRST (PADS 1-3)" : "PICK A SOURCE FIRST (GLO+KEY 1-3)", 1200); return; }
+    if (!s3_src_armed) { learn_notice(LEARN_PADS ? "PICK A SOURCE: PADS 1-3" : "PICK A SOURCE: GLO+KEY 1-3", 1200); return; }
     source = s3_src_armed - 1u;
     if (RULE_SRC[rule] != source) {
         n = ls_cat(line, 0, sizeof line, RULE_NAME[rule]); n = ls_cat(line, n, sizeof line, " FOLLOWS "); ls_cat(line, n, sizeof line, SRC_NAME[RULE_SRC[rule]]);
@@ -586,7 +586,7 @@ static void stage3_control(struct lctx *x)
     if (b & LB(LB_EDIT)) { s3_sel = (uint8_t)((s3_sel + 1u) % SHADOWS); x->redraw = 1; }
     if (b & LB(LB_ARP)) {
         if (lesson_running()) { lesson_stop(); learn_notice("LESSON STOPPED", 800); }
-        else { unsigned i; for (i = 0; i < lesson_count; i++) if (lessons[i].stage == 3) { lesson_start(i); break; } if (!lesson_running()) learn_notice("NO STAGE 3 LESSON IN THIS PACK", 900); }
+        else { unsigned i; for (i = 0; i < lesson_count; i++) if (lessons[i].stage == 3) { lesson_start(i); break; } if (!lesson_running()) learn_notice("NO PAGE 3 LESSON IN THIS PACK", 900); }
         x->redraw = 1;
     }
     if (b & LB(LB_LFO)) { s3_arp_entry = 0; if (s3_sh[s3_sel].used) demo_start(x, s3_sh[s3_sel].rule); }
@@ -685,7 +685,7 @@ static void stage3_draw(struct lctx *x)
     n = ls_num(line, n, sizeof line, lsong.bars); n = ls_cat(line, n, sizeof line, "BAR ");
     n = ls_num(line, n, sizeof line, lsong.tempo); n = ls_cat(line, n, sizeof line, " BPM");
     if (x->slow_percent < 100u) { n = ls_cat(line, n, sizeof line, " S"); ls_num(line, n, sizeof line, x->slow_percent); }
-    ld_text(4, 2, line, 0, LC_DIM);
+    ld_text(4, 2, line, 0, LC_GREY);
     ld_fill(228, 6, 8, 8, lsyx_partner_present() ? LC_GREEN : LC_PANEL);
     big[0] = 0; sub[0] = 0;
     if (s3_src_armed) { ls_cat(big, 0, sizeof big, SRC_NAME[s3_src_armed - 1u]); ls_cat(sub, 0, sizeof sub, "PICK A RULE"); }
@@ -712,19 +712,21 @@ static void stage3_draw(struct lctx *x)
         if (active) ld_fill(47, y + 1, (int)(active * 118u / steps) + 1, 10, shadowed ? c : LC_DIM);
         for (s = 0; s < steps / 16u; s++) if ((punch >> s) & 1u) ld_fill(47 + (int)s * 118 / (int)(steps / 16u), y + 13, 118 / (int)(steps / 16u), 2, LC_RED);
         if (head != 0xffu) ld_fill(47 + (int)(head * 118u / steps), y + 1, 2, 10, rec ? LC_RED : LC_ORANGE);
-        if (i == 0u) { n = ls_cat(line, 0, sizeof line, "T"); if (s3_take_cur != 255u) ls_num(line, n, sizeof line, s3_take_cur + 1u); else ls_cat(line, n, sizeof line, "-"); ld_text(172, y - 2, line, 0, s3_take_cur != 255u ? LC_AMBER : LC_PANEL); }
+        if (i == 0u) { n = ls_cat(line, 0, sizeof line, "T"); if (s3_take_cur != 255u) ls_num(line, n, sizeof line, s3_take_cur + 1u); else ls_cat(line, n, sizeof line, "-"); ld_text(172, y - 2, line, 0, s3_take_cur != 255u ? LC_AMBER : LC_DIM); }
         lvl = (unsigned)(trk[t].peak < 0 ? 0 : trk[t].peak) >> 10; if (lvl > 36u) lvl = 36u;
         ld_frame(196, y, 40, 12, LC_PANEL);
         if (lvl) ld_fill(198, y + 2, (int)lvl, 8, (s3_solo >> t) & 1u ? LC_YELLOW : LC_GREEN);
     }
     line[0] = 0;
-    if (s3_recording()) ls_cat(line, 0, sizeof line, s3_punch_on ? "PUNCHING: RELEASE " LBL_REC " TO END" : "TAPING: " LBL_PLAY " TO FINISH");
+    if (s3_recording()) ls_cat(line, 0, sizeof line, s3_punch_on ? "PUNCH: LET GO OF " LBL_REC " TO END" : "TAPING: " LBL_PLAY " TO FINISH");
     else if (s3_punch_armed) ls_cat(line, 0, sizeof line, "PUNCH WAITS FOR THE BAR");
     else if (s3_arp_entry) ls_cat(line, 0, sizeof line, LEARN_PADS ? "TAP PATTERN ON PADS 9-16" : "GLO+KEYS 9-16: THE PATTERN");
     else if (s3_demo_phase) ls_cat(line, 0, sizeof line, s3_demo_phase == 1u ? "LISTEN: SOURCE ALONE" : "LISTEN: SHADOW ALONE");
     else if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
-    else ls_cat(line, 0, sizeof line, LEARN_PADS ? LBL_REC "+" LBL_PLAY " TAPE  PAD7 TRACK" : LBL_REC "+" LBL_PLAY " TAPE  " LBL_SAVE " UNDO");
+    else ls_cat(line, 0, sizeof line, LEARN_PADS ? "PADS 1-3 SOURCE, 9-16 RULE" : LBL_GLO "+KEY 1-3 SRC, 9-16 RULE");
     ld_text(4, 166, line, 0, s3_recording() ? LC_RED : LC_AMBER);
+    if (!s3_recording() && !s3_punch_armed && !s3_arp_entry && !s3_demo_phase && !ls && !lesson_running())
+        ld_text(4, 184, LBL_REC "+" LBL_PLAY ": TAPE A PASS", 0, LC_DIM);
     if (lesson_running()) {
         const struct lesson *l = &lessons[lesson_running() - 1u];
         n = ls_cat(line, 0, sizeof line, l->title); n = ls_cat(line, n, sizeof line, "  ");

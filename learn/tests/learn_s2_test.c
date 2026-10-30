@@ -29,6 +29,7 @@ int main(int argc, char **argv)
     layers_init(); host_tracks_init(); go_home(); ui.force = 1; frame();
     hold_both(1700);
     check(learn_on && learn_page() == 1, "LEARN mode, page 1");
+    tap(B_ENV); tap(B_ENV);
     tap(B_SEQ); frames(2);
     check(learn_page() == 2, "SEQ: page 2");
     check(trk[LT_CHORDS].p[P_SLEN] == 16 && TDRUM->p[P_SLEN] == 16, "the loop is one bar on SLOOP's tracks");

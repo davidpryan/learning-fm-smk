@@ -112,7 +112,7 @@ static void lesson_step_done(unsigned passed, unsigned score)
                 les_idx, score);
         if (l->unlocks)
             log_unlock(l->unlocks);
-        learn_notice(l->unlocks & UNLOCK_STAGE2 && lpage == 1u && LEARN_STAGE > 1 ? "LESSON DONE! SEQ: PAGE 2 IS READY" : "LESSON DONE!", 2500);
+        learn_notice(l->unlocks & UNLOCK_STAGE2 && lpage == 1u && LEARN_STAGE > 1 ? "LESSON DONE! SEQ: PAGE 2" : "LESSON DONE!", 2500);
         les_idx = 0;
         les_step = 0;
     } else {
@@ -161,9 +161,10 @@ static void learn_set(int on)
         lpage = 1;
         lpage_inited = 0;
         lov_log = lov_help = 0;
+        lov_welcome = 1;
         lresult.valid = 0;
         stage_init_page(1);
-        learn_notice("LEARN ON. " LBL_GLO "+SEQ: HELP", 3000);
+        learn_notice(LBL_GLO "+SEQ HELP, " LBL_GLO "+ARP LOG", 3000);
         lx.redraw = 1;
         ld_dirty = 1;
         learn_on = 1;
@@ -340,8 +341,9 @@ static void learn_input(uint32_t pressed, uint32_t now_ticks)
     /* the layer's own buttons: OCT -/+ the octave, SEQ the next page */
     if (lx.btn_down & LB(LB_OCT_DOWN)) { if (lx.octave > -2) lx.octave--; lx.redraw = 1; }
     if (lx.btn_down & LB(LB_OCT_UP)) { if (lx.octave < 2) lx.octave++; lx.redraw = 1; }
-    if ((lx.btn_down & LB(LB_SEQ)) && (lx.buttons & LB(LB_GLO))) {   /* GLO + SEQ: this page's help */
-        lov_help = !lov_help; lov_log = 0; lx.btn_down &= ~LB(LB_SEQ); ld_dirty = 1;
+    if (lov_welcome && lx.btn_down) { lov_welcome = 0; lx.btn_down = 0; ld_dirty = 1; }   /* the welcome: any button */
+    if ((lx.btn_down & LB(LB_SEQ)) && ((lx.buttons & LB(LB_GLO)) || lov_help)) {   /* GLO + SEQ: the help; SEQ pages it */
+        lov_help = (uint8_t)((lov_help + 1u) % (HELP_SCREENS + 1u)); lov_log = 0; lx.btn_down &= ~LB(LB_SEQ); ld_dirty = 1;
     }
     if ((lx.btn_down & LB(LB_ARP)) && (lx.buttons & LB(LB_GLO))) {   /* GLO + ARP: the results log */
         lov_log = !lov_log; lov_help = 0; lx.btn_down &= ~LB(LB_ARP); ld_dirty = 1;
@@ -374,6 +376,7 @@ static void learn_input(uint32_t pressed, uint32_t now_ticks)
 #endif
     /* what the player did since the last poll */
     while (lev_pull(&kind, &a, &b)) {
+        if (lov_welcome && b) { lov_welcome = 0; ld_dirty = 1; }   /* (a key begins too) */
         if (kind == LEV_KEY) {
             int n = (int)a + 12 * lx.octave;
             if (n < 0) n = 0;
@@ -455,40 +458,71 @@ static void overlay_log(void)
     }
     ld_text(4, 222, LBL_GLO "+ARP CLOSES", 0, LC_DIM);
 }
+/* the help: three screens a page (what it is for and how to learn here; the buttons; the knobs, faders, pads), in the
+ * names printed on the panel in the player's hands. Each line fits the screen (29 characters). */
+#if BOARD_SMK37
+#define HK(n) "K" #n
+#define HLINES_COMMON "GLOBE+SEQ: NEXT HELP SCREEN", "GLOBE+ARP: YOUR RESULTS", "GLOBE+PATCH 2S: PLAIN SLOOP"
+static const char *const HELP1[3][12] = {
+    {"PAGE 1 LANTERN: HEAR IT", "WHAT IT IS FOR:", "PLAY AND READ THE SCREEN.", "IT NAMES EVERY NOTE AND CHORD", "AND SAYS WHAT IT DOES IN THE", "KEY. WRONG NOTES ARE NUDGED.", "HOW TO LEARN HERE:", "ARP STARTS LESSON 1. PASS IT,", "THEN THE NEXT. 20 LESSONS.", "DRILLS: COPY WHAT YOU HEAR.", HLINES_COMMON},
+    {"PAGE 1 BUTTONS", "KEYS: PLAY A NOTE", "PADS 1-7: CHORDS I-VII", "PADS 9-15: THE SAME + 7TH", "SEQ PLAY: START/STOP A DRILL", "SEQ REC: REPLAY REF, THEN YOU", "ARP: LESSON ON / OFF", "SCALE: NEXT SCALE TYPE", "GLOBE+KEY: THAT NOTE IS ROOT", "CHORD: HINTS+NUDGE ON/OFF", "PATCH: STOP EVERYTHING", "SEQ: NEXT PAGE", 0},
+    {"PAGE 1 KNOBS", "K1: VOLUME (ALWAYS)", "K2: SOUND ENGINE", "K3: PRESET", "K4: REVERB  K5: DELAY", "K6: SLOW MODE 50-100%", "K7: PICK A LESSON", "K8: DRILL KIND", "OCTAVE -/+: OCTAVE", "", HLINES_COMMON[0], 0}};
+static const char *const HELP2[3][12] = {
+    {"PAGE 2 PULSE: LOOP IT", "WHAT IT IS FOR:", "A LOOP: DRUMS ON A GRID, A", "CHORD PER BEAT, A BASS THAT", "FOLLOWS THE KICK, A MELODY.", "HOW TO LEARN HERE:", "SEQ PLAY. CHANGE ONE THING,", "LISTEN. TAP CHORDS ON PADS.", "RECORD ONE PASS OF MELODY.", "CHORD = RHYTHM TRAINER.", HLINES_COMMON},
+    {"PAGE 2 BUTTONS", "SEQ PLAY: LOOP ON / OFF", "PADS: THE LANE'S 16 STEPS", "GLOBE+PAD 1-4: PICK LANE", "FX: PADS = CHORDS / GRID", "SCALE: NEXT LANE  BT: RE-ROLL", "SEQ REC: CHORD REC / RAW-SNAP", "SEQ REC+SEQ PLAY: MELODY TAKE", "SEQ REC+BT: UNDO THE TAKE", "CHORD: RHYTHM TRAINER", "PATCH: STOP EVERYTHING", 0},
+    {"PAGE 2 KNOBS", "K2: HITS  K3: SHIFT (LANE)", "K4: SWING*  K5: FILL*", "K6: BASS RULE  K7: TEMPO", "K8: SNAP TO GRID %", "PARA HELD: K2 PATCH K3 TRACK", "  K4 SLOW K5 LESSON K6 PERC", "  K7 BARS K8 BASS OCTAVE", "FADERS: MEL CHD BASS DRUM LVL", "* UNLOCKED BY THE TRAINER", HLINES_COMMON[0], 0}};
+static const char *const HELP3[3][12] = {
+    {"PAGE 3 SHADOW: GROW IT", "WHAT IT IS FOR:", "NEW PARTS MADE BY A RULE ON A", "PART YOU HAVE: 3RD ABOVE THE", "MELODY, ARPEGGIATED CHORDS,", "GHOST HATS. AND A TAPE DECK.", "HOW TO LEARN HERE:", "PAD 1-3 SOURCE, THEN A RULE.", "HOLD A RULE PAD: HEAR IT.", "TAPE PASSES, UNDO, COMPARE.", HLINES_COMMON},
+    {"PAGE 3 BUTTONS", "PADS 1-3: SOURCE CHD MEL DRUM", "PADS 9-16: RULE = A SHADOW", "PADS 4-6: SLOT A B C, HOLD=RM", "PAD 7: TRACK  PAD 8: EXPORT", "SEQ REC+SEQ PLAY: TAPE A PASS", "SEQ REC (PLAYING): PUNCH BAR", "SEQ REC TAP: A/B LAST TAKES", "BT: UNDO  GLOBE+BT: REDO", "NOTE RPT: HEAR SRC / SHADOW", "FX: REMOVE  PARA: NEXT SLOT", 0},
+    {"PAGE 3 KNOBS", "K2: OCTAVE  K3: DENSITY", "K4: VELOCITY  K5: PATCH", "K6: SEND PICK  K7: SEND AMT", "K8: SLOW MODE", "FADERS 1-3: OBEDIENCE A B C", "FADER 4: THE SEND", "GLOBE+PAD 1-6: SOLO (HELD)", "", "", HLINES_COMMON[0], 0}};
+static const char *const HELP4[3][12] = {
+    {"PAGE 4 STAGE: FINISH IT", "WHAT IT IS FOR:", "THE LOOP BECOMES A SECTION.", "EIGHT SLOTS. QUEUE THEM BY", "HAND AND A SONG HAPPENS.", "HOW TO LEARN HERE:", "STORE A VERSE. CHANGE THE", "LOOP, STORE A CHORUS. PLAY,", "SWITCH ON THE PADS, RECORD", "THE ORDER WITH SEQ REC.", HLINES_COMMON},
+    {"PAGE 4 BUTTONS", "GLOBE+PAD 9-16: STORE AS SLOT", "PAD 1-8: SLOT AT NEXT LOOP", "2X TAP: NEXT BEAT  HOLD: ONCE", "PAD 9-16: SLOT'S TYPE", "SCALE: STORE TYPE  BT: STORE", "SEQ PLAY: LOOP  SEQ REC: REC", "PATCH: STOP (AGAIN: DISCARD)", "CHORD: NEXT TRANSITION", "PAD HELD 2S: WHAT IS IN IT", "", 0},
+    {"PAGE 4 KNOBS", "K2: ENERGY 1-8", "K3: STORE-AS TYPE", "K4: LESSON  K5: SLOW", "K6: TRANSITION", "K7: TEMPO +-10%  K8: SWING", "FADERS: ENERGY DRUMS MUSIC", "  MELODY", "", "", HLINES_COMMON[0], 0}};
+#else
+#define HLINES_COMMON "GLO+SEQ: NEXT HELP SCREEN", "GLO+ARP: YOUR RESULTS", "GLO+HOME 2S: PLAIN SLOOP"
+static const char *const HELP1[3][12] = {
+    {"PAGE 1 EMBER: HEAR IT", "WHAT IT IS FOR:", "PLAY AND READ THE SCREEN.", "IT NAMES EVERY NOTE AND CHORD", "AND SAYS WHAT IT DOES IN THE", "KEY. WRONG NOTES ARE NUDGED.", "HOW TO LEARN HERE:", "ARP STARTS LESSON 1. PASS IT,", "THEN THE NEXT. 20 LESSONS.", "DRILLS: COPY WHAT YOU HEAR.", HLINES_COMMON},
+    {"PAGE 1 BUTTONS", "KEYS: PLAY A NOTE", "GLO+SCL: CHORD KEYS ON/OFF", "  (A WHITE KEY = ITS CHORD)", "PLAY: START/STOP A DRILL", "REC: REPLAY REF, THEN YOU", "ARP: LESSON ON / OFF", "SCL: NEXT SCALE TYPE", "GLO+KEY: THAT NOTE IS ROOT", "ENV: HINTS+NUDGE  FX: STAFF", "HOME: STOP EVERYTHING", "SEQ: NEXT PAGE", 0},
+    {"PAGE 1 KNOBS", "K1: SOUND ENGINE", "K2: PRESET", "K3: REVERB  K4: DELAY", "K5: SLOW MODE 50-100%", "K6: PICK A LESSON", "K7: DRILL KIND", "OCT -/+: OCTAVE", "", "", HLINES_COMMON[0], 0}};
+static const char *const HELP2[3][12] = {
+    {"PAGE 2 ROOT: LOOP IT", "WHAT IT IS FOR:", "A LOOP: DRUMS ON A GRID, A", "CHORD PER BEAT, A BASS THAT", "FOLLOWS THE KICK, A MELODY.", "HOW TO LEARN HERE:", "PLAY. CHANGE ONE THING,", "LISTEN. CHORD KEYS WRITE", "THE LOOP. RECORD A MELODY.", "ENV = RHYTHM TRAINER.", HLINES_COMMON},
+    {"PAGE 2 BUTTONS", "PLAY: LOOP ON / OFF", "FX: KEYS = CHORDS / MELODY", "GLO+KEYS 1-16: LANE STEPS", "GLO+KEYS 17-19: BASS RULE", "SCL: NEXT LANE  SAVE: RE-ROLL", "REC: CHORD REC / RAW-SNAP", "REC+PLAY: MELODY TAKE", "REC+SAVE: UNDO THE TAKE", "ENV: TRAINER (ANY KEY TAPS)", "HOME: STOP EVERYTHING", 0},
+    {"PAGE 2 KNOBS", "K1: HITS  K2: SHIFT (LANE)", "K3: SWING*  K4: FILL*", "K5: BASS RULE  K6: TEMPO", "K7: SNAP TO GRID %", "EDIT HELD: K1 PATCH K2 TRACK", "  K3 SLOW K4 LESSON K5 PERC", "  K6 BARS K7 BASS OCTAVE", "* UNLOCKED BY THE TRAINER", "", HLINES_COMMON[0], 0}};
+static const char *const HELP3[3][12] = {
+    {"PAGE 3 TAPE: GROW IT", "WHAT IT IS FOR:", "NEW PARTS MADE BY A RULE ON A", "PART YOU HAVE: 3RD ABOVE THE", "MELODY, ARPEGGIATED CHORDS,", "GHOST HATS. AND A TAPE DECK.", "HOW TO LEARN HERE:", "GLO+KEY 1-3 SOURCE, 9-16 RULE", "LFO: HEAR SOURCE, THEN SHADOW", "TAPE PASSES, UNDO, COMPARE.", HLINES_COMMON},
+    {"PAGE 3 BUTTONS", "GLO+KEYS 1-3: SOURCE", "GLO+KEYS 9-16: RULE", "GLO+KEYS 4-6: SLOT A B C", "GLO+KEYS 17-19: TRACK", "REC+PLAY: TAPE A PASS", "REC (PLAYING): PUNCH A BAR", "REC TAP: A/B THE LAST TAKES", "SAVE: UNDO  GLO+SAVE: REDO", "LFO: HEAR SRC / SHADOW", "FX: REMOVE  EDIT: NEXT SLOT", 0},
+    {"PAGE 3 KNOBS", "K1: OCTAVE  K2: OBEDIENCE", "GLO+K2: DENSITY  K3: VELOCITY", "K4: PATCH  K5: SEND PICK", "K6: SEND AMOUNT  K7: SLOW", "HOME+REC: EXPORT OVER USB", "", "", "", "", HLINES_COMMON[0], 0}};
+static const char *const HELP4[3][12] = {
+    {"PAGE 4 SCRIBE: FINISH IT", "WHAT IT IS FOR:", "THE LOOP BECOMES A SECTION.", "EIGHT SLOTS. QUEUE THEM BY", "HAND AND A SONG HAPPENS.", "HOW TO LEARN HERE:", "STORE A VERSE. CHANGE THE", "LOOP, STORE A CHORUS. PLAY,", "SWITCH WITH GLO+KEYS, RECORD", "THE ORDER WITH REC.", HLINES_COMMON},
+    {"PAGE 4 BUTTONS", "GLO+KEYS 9-16: STORE AS SLOT", "GLO+KEYS 1-8: SLOT, NEXT LOOP", "2X TAP: NEXT BEAT  HOLD: ONCE", "SCL: STORE TYPE  SAVE: STORE", "PLAY: LOOP  REC: RECORD", "HOME: STOP (AGAIN: DISCARD)", "ENV: NEXT TRANSITION", "", "", "", 0},
+    {"PAGE 4 KNOBS", "K1: ENERGY 1-8", "K2: STORE-AS TYPE", "K3: LESSON  K4: SLOW", "K5: TRANSITION", "K6: TEMPO +-10%  K7: SWING", "", "", "", "", HLINES_COMMON[0], 0}};
+#endif
 static void overlay_help(void)
 {
-#if BOARD_SMK37
-    static const char *const H1[] = {"PAGE 1 LANTERN: HEAR IT", "KEYS: PLAY. SCREEN NAMES IT", "PADS 1-7: CHORDS I-VII",
-        "PADS 9-15: THE SAME + 7TH", "SEQ PLAY: DRILL SEQ REC: REDO", "ARP: LESSON ON / OFF", "SCALE: SCALE TYPE",
-        "GLOBE+KEY: ROOT  CHORD: HINTS", "K2 SOUND K3 PATCH K4 REV K5DL", "K6 SLOW K7 LESSON K8 DRILL", "GLOBE+ARP: RESULTS", 0};
-    static const char *const H2[] = {"PAGE 2 PULSE: LOOP IT", "SEQ PLAY: LOOP ON / OFF", "PADS: THE LANE'S 16 STEPS",
-        "FX: PADS = CHORDS OR GRID", "SCALE: NEXT LANE  BT: RE-ROLL", "SEQ REC: CHORD REC / RAW-SNAP", "SEQ REC+SEQ PLAY: MELODY TAKE",
-        "CHORD: RHYTHM TRAINER", "K2 HITS K3 SHIFT K4 SWG K5FIL", "K6 BASS K7 TEMPO K8 SNAP", "PARA+KNOB: PATCH TRACK SLOW..", 0};
-    static const char *const H3[] = {"PAGE 3 SHADOW: GROW IT", "PADS 1-3: SOURCE, THEN", "PADS 9-16: A RULE = A SHADOW",
-        "PADS 4-6: SLOT A B C, HOLD=RM", "SEQ REC+SEQ PLAY: TAPE A PASS", "SEQ REC WHILE PLAYING: PUNCH", "BT: UNDO TAKE  GLOBE+BT: REDO",
-        "NOTE RPT: HEAR SOURCE, SHADOW", "K2 OCT K3 DENS K4 VEL K5 PTCH", "FADERS 1-3: OBEDIENCE A B C", "PAD 8: EXPORT OVER USB", 0};
-    static const char *const H4[] = {"PAGE 4 STAGE: FINISH IT", "GLOBE+PAD 9-16: STORE LOOP AS", "SLOT 1-8 (SCALE: ITS TYPE)",
-        "PAD 1-8: PLAY SLOT, NEXT LOOP", "2X TAP: NEXT BEAT  HOLD: ONCE", "SEQ REC: RECORD THE ORDER", "PATCH: STOP (AGAIN: DISCARD)",
-        "K2 ENERGY K6 TRANSITION", "K7 TEMPO K8 SWING", "FADERS: ENERGY DRUM MUSIC MEL", "PAD HELD 2S: WHAT IS IN IT", 0};
-#else
-    static const char *const H1[] = {"PAGE 1 EMBER: HEAR IT", "KEYS: PLAY. SCREEN NAMES IT", "GLO+SCL: CHORD KEYS",
-        "PLAY: DRILL  REC: REPLAY", "ARP: LESSON ON / OFF", "SCL: SCALE  GLO+KEY: ROOT", "ENV: HINTS+NUDGE  FX: STAFF",
-        "K1 SOUND K2 PATCH K3 REV K4DL", "K5 SLOW K6 LESSON K7 DRILL", "GLO+ARP: RESULTS", 0};
-    static const char *const H2[] = {"PAGE 2 ROOT: LOOP IT", "PLAY: LOOP ON / OFF", "FX: KEYS = CHORDS OR MELODY",
-        "GLO+KEYS 1-16: LANE STEPS", "GLO+KEYS 17-19: BASS RULE", "SCL: NEXT LANE  SAVE: RE-ROLL", "REC: CHORD REC / RAW-SNAP",
-        "REC+PLAY: MELODY TAKE", "ENV: RHYTHM TRAINER (ANY KEY)", "K1 HITS K2 SHIFT K3 SWG K4FIL", "K5 BASS K6 TEMPO K7 SNAP", 0};
-    static const char *const H3[] = {"PAGE 3 TAPE: GROW IT", "GLO+KEYS 1-3: SOURCE, THEN", "GLO+KEYS 9-16: A RULE",
-        "GLO+KEYS 4-6: SLOT A B C", "REC+PLAY: TAPE A PASS", "REC WHILE PLAYING: PUNCH", "SAVE: UNDO  GLO+SAVE: REDO",
-        "LFO: HEAR SOURCE / SHADOW", "K1 OCT K2 OBEDIENCE K3 VEL", "FX: REMOVE SHADOW  EDIT: SLOT", "HOME+REC: EXPORT OVER USB", 0};
-    static const char *const H4[] = {"PAGE 4 SCRIBE: FINISH IT", "GLO+KEYS 9-16: STORE LOOP AS", "SLOT 1-8 (SCL: ITS TYPE)",
-        "GLO+KEYS 1-8: SLOT, NEXT LOOP", "2X TAP: NEXT BEAT  HOLD: ONCE", "REC: RECORD THE ORDER", "HOME: STOP (AGAIN: DISCARD)",
-        "K1 ENERGY K5 TRANSITION", "K6 TEMPO K7 SWING", "SAVE: STORE INTO CURSOR SLOT", "SEQ: NEXT PAGE", 0};
-#endif
-    const char *const *h = lpage == 2u ? H2 : lpage == 3u ? H3 : lpage == 4u ? H4 : H1;
-    unsigned i;
-    ld_bar_text(0, h[0], LC_PANEL, LC_TEXT);
-    for (i = 1; h[i]; i++) ld_text(4, 22 + (int)(i - 1u) * 18, h[i], 0, i == 1u ? LC_TEXT : LC_DIM);
-    ld_text(4, 222, LBL_GLO "+" LBL_HOME " 2S: SLOOP", 0, LC_DIM);
+    const char *const (*h)[12] = lpage == 2u ? HELP2 : lpage == 3u ? HELP3 : lpage == 4u ? HELP4 : HELP1;
+    const char *const *sc = h[(lov_help - 1u) % HELP_SCREENS];
+    char tag[8];
+    unsigned i, n;
+    ld_bar_text(0, sc[0], LC_PANEL, LC_TEXT);
+    n = ls_num(tag, 0, sizeof tag, lov_help); n = ls_cat(tag, n, sizeof tag, "/"); ls_num(tag, n, sizeof tag, HELP_SCREENS);
+    ld_text(212, 1, tag, 0, LC_GREY);
+    for (i = 1; i < 12u && sc[i]; i++)
+        if (sc[i][0]) { unsigned L = 0; while (sc[i][L]) L++; ld_text(4, 20 + (int)(i - 1u) * 17, sc[i], 0, sc[i][L - 1u] == ':' ? LC_AMBER : LC_TEXT); }
+    ld_text(4, 222, "SEQ: NEXT   ANY OTHER: CLOSE", 0, LC_DIM);
+}
+static void overlay_welcome(void)
+{
+    ld_bar_text(0, "WELCOME TO LEARN MODE", LC_AMBER, LC_BG);
+    ld_text(4, 26, "1. PLAY THE KEYS. THE SCREEN", 0, LC_TEXT);
+    ld_text(4, 44, "   NAMES WHAT YOU PLAY.", 0, LC_TEXT);
+    ld_text(4, 70, "2. PRESS ARP: LESSON 1.", 0, LC_TEXT);
+    ld_text(4, 88, "   IT TALKS YOU THROUGH.", 0, LC_TEXT);
+    ld_text(4, 114, "3. " LBL_GLO "+SEQ: HELP, ANY TIME.", 0, LC_TEXT);
+    ld_text(4, 132, "   " LBL_GLO "+ARP: YOUR RESULTS.", 0, LC_TEXT);
+    ld_text(4, 158, "SEQ: THE NEXT PAGE (4 PAGES).", 0, LC_GREY);
+    ld_text(4, 176, LBL_GLO "+" LBL_HOME " 2S: PLAIN SLOOP.", 0, LC_GREY);
+    ld_text(4, 222, "PRESS ANY KEY TO BEGIN", 0, LC_AMBER);
 }
 
 /* ---- the screen (ui_draw.c): 1 = LEARN mode drew (or kept) the screen, 0 = not ours ---- */
@@ -508,14 +542,15 @@ static int learn_screen(void)
     for (pass = 0; pass < 2; pass++) {
         ld_y0 = pass * 120;
         cv_begin(240, 120, LC_BG);
-        if (lov_help) overlay_help();
+        if (lov_welcome) overlay_welcome();
+        else if (lov_help) overlay_help();
         else if (lov_log) overlay_log();
         else {
             char tag[6];
             unsigned n = ls_cat(tag, 0, sizeof tag, "P");
             n = ls_num(tag, n, sizeof tag, lpage); n = ls_cat(tag, n, sizeof tag, "/"); ls_num(tag, n, sizeof tag, LEARN_STAGE);
             page_draw(&lx);
-            ld_text(188, 2, tag, 0, LC_PANEL);    /* which of the pages this is */
+            ld_text(188, 2, tag, 0, LC_DIM);    /* which of the pages this is */
         }
         cv_blit(0, (uint32_t)ld_y0);
     }

@@ -80,7 +80,8 @@ enum { LB_FX = B_FX, LB_SCL = B_SCL, LB_ENV = B_ENV, LB_LFO = B_LFO, LB_EDIT = B
 /* ---- colours: RGB565 for the screen, 0xRRGGBB for the pads ---- */
 #define LC_BG     0x0000
 #define LC_TEXT   0xFFFF
-#define LC_DIM    0x8410
+#define LC_DIM    0x9CF3          /* secondary text (readable on the small LCD; never darker for text) */
+#define LC_GREY   0xC618          /* the header and labels */
 #define LC_GREEN  0x07E0
 #define LC_ORANGE 0xFD20
 #define LC_CYAN   0x07FF
@@ -261,7 +262,8 @@ static unsigned lesson_progress(void);
 /* the key lights (FM-1: the LEDs under the 27 keys; both: the keymap strip): bit k = key k from F3 */
 static uint32_t llit_keys, lbright_keys;
 /* overlays shared by every page (main.c): the results log (GLO + ARP) and the page's help (GLO + SEQ) */
-static uint8_t lov_log, lov_help;
+static uint8_t lov_log, lov_help, lov_welcome;   /* lov_help: 0 off, 1.. the help screen shown */
+#define HELP_SCREENS 3u
 /* the last drill's result, shown until the player plays again (page 1 fills it; main.c draws nothing of it) */
 static struct { uint8_t valid, kind, passed; unsigned hits, misses, pct; } lresult;
 /* the metronome / clock the stages share: SLOOP's tempo */

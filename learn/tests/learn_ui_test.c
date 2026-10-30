@@ -50,6 +50,10 @@ int main(int argc, char **argv)
     song.playing = 0; transport_req = 0;
     frames(4);
     check(learn_isr == 1, "the ISR followed into LEARN");
+    check(lov_welcome, "the welcome screen");
+    shot("learn-welcome");
+    tap(B_ENV);
+    check(!lov_welcome && s1_hints, "a button dismisses it and does nothing else");
     shot("learn-s1-idle");
 
     /* ---- a key: C4 (key 7 = C4 in C major: in the scale) ---- */
@@ -194,8 +198,17 @@ int main(int argc, char **argv)
     check(lov_log && !lesson_running(), "GLO + ARP: the results log, not a lesson");
     shot("learn-log");
     fm1_in.buttons |= BT(B_GLO); frame(); tap(B_SEQ); fm1_in.buttons &= ~BT(B_GLO); frame();
-    check(lov_help && !lov_log && learn_page() == 1, "GLO + SEQ: the help, the page unchanged");
+    check(lov_help == 1 && !lov_log && learn_page() == 1, "GLO + SEQ: the help, the page unchanged");
     shot("learn-help");
+    tap(B_SEQ);
+    check(lov_help == 2 && learn_page() == 1, "SEQ pages the help, not the pages");
+    shot("learn-help2");
+    tap(B_SEQ);
+    check(lov_help == 3, "screen 3");
+    shot("learn-help3");
+    tap(B_SEQ);
+    check(lov_help == 0 && learn_page() == 1, "and off again");
+    fm1_in.buttons |= BT(B_GLO); frame(); tap(B_SEQ); fm1_in.buttons &= ~BT(B_GLO); frame();
     tap(B_ENV);
     check(!lov_help, "any button closes it");
     tap(B_ENV);

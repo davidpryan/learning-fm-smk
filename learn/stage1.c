@@ -83,7 +83,7 @@ static void play_degree(struct lctx *x, unsigned degree, unsigned seventh, unsig
     if (!n) return;
     lmidi_chord_on(LT_CHORDS, notes, n, velocity, slot);
     roman_push(degree, seventh); s1_minor = (uint8_t)x->minor;
-    if (s1_hints) { str_cpy(s1_hint, theory_why_hint(x->minor, degree), sizeof s1_hint); s1_hint_until = x->now + 2500u; }
+    if (s1_hints) { str_cpy(s1_hint, theory_why_hint(x->minor, degree), sizeof s1_hint); s1_hint_until = x->now + 4000u; }
     p[0] = (uint8_t)degree; p[1] = (uint8_t)seventh; p[2] = (uint8_t)x->minor;
     lsyx_send(LCMD_HINT, p, 3);
     x->redraw = 1;
@@ -374,11 +374,13 @@ static void stage1_encoder(struct lctx *x, unsigned id, int delta)
         learn_bank_select(LT_KEYS, s1_bank, s1_patch); learn_bank_select(LT_CHORDS, s1_bank, s1_patch); s1_sends();
         { char b[24]; unsigned k = ls_cat(b, 0, sizeof b, "PATCH "); ls_num(b, k, sizeof b, s1_patch + 1u); learn_notice(b, 900); }
     } break;
-    case 2: { int v = (int)s1_reverb + delta * 8; s1_reverb = (uint8_t)(v < 0 ? 0 : v > 127 ? 127 : v); s1_sends(); } break;
-    case 3: { int v = (int)s1_delay + delta * 8; s1_delay = (uint8_t)(v < 0 ? 0 : v > 127 ? 127 : v); s1_sends(); } break;
+    case 2: { int v = (int)s1_reverb + delta * 8; char b[24]; unsigned k; s1_reverb = (uint8_t)(v < 0 ? 0 : v > 127 ? 127 : v); s1_sends(); k = ls_cat(b, 0, sizeof b, "REVERB "); ls_num(b, k, sizeof b, s1_reverb * 100u / 127u); learn_notice(b, 900); } break;
+    case 3: { int v = (int)s1_delay + delta * 8; char b[24]; unsigned k; s1_delay = (uint8_t)(v < 0 ? 0 : v > 127 ? 127 : v); s1_sends(); k = ls_cat(b, 0, sizeof b, "DELAY "); ls_num(b, k, sizeof b, s1_delay * 100u / 127u); learn_notice(b, 900); } break;
     case 4: {
         int v = (int)x->slow_percent + delta * 5; uint8_t p;
+        char b[24]; unsigned k;
         x->slow_percent = (unsigned)(v < 50 ? 50 : v > 100 ? 100 : v); p = (uint8_t)x->slow_percent; lsyx_send(LCMD_SLOW, &p, 1);
+        k = ls_cat(b, 0, sizeof b, x->slow_percent < 100u ? "SLOW MODE " : "FULL SPEED "); if (x->slow_percent < 100u) { k = ls_num(b, k, sizeof b, x->slow_percent); ls_cat(b, k, sizeof b, "%"); } learn_notice(b, 900);
     } break;
     case 5: {
         int v = (int)s1_lesson_pick + delta;
@@ -416,7 +418,7 @@ static void stage1_sysex(struct lctx *x, unsigned cmd, const uint8_t *p, unsigne
         }
         break;
     case LCMD_HINT:
-        if (n >= 3 && s1_hints) { roman_push(p[0], p[1]); s1_minor = p[2]; str_cpy(s1_hint, theory_why_hint(p[2], p[0]), sizeof s1_hint); s1_hint_until = x->now + 2500u; x->redraw = 1; }
+        if (n >= 3 && s1_hints) { roman_push(p[0], p[1]); s1_minor = p[2]; str_cpy(s1_hint, theory_why_hint(p[2], p[0]), sizeof s1_hint); s1_hint_until = x->now + 4000u; x->redraw = 1; }
         break;
     case LCMD_DRILL:                              /* the partner's drill: this screen shows its prompt */
         if (n >= 4 && (s1d.state == DS_IDLE || !s1d.total)) {
@@ -526,7 +528,7 @@ static void stage1_draw(struct lctx *x)
     n = ls_cat(line, n, sizeof line, x->octave < 0 ? "-" : x->octave > 0 ? "+" : " ");
     n = ls_num(line, n, sizeof line, (unsigned)(x->octave < 0 ? -x->octave : x->octave));
     if (x->slow_percent < 100u) { n = ls_cat(line, n, sizeof line, " S"); n = ls_num(line, n, sizeof line, x->slow_percent); }
-    ld_text(4, 2, line, 0, LC_DIM);
+    ld_text(4, 2, line, 0, LC_GREY);
     ld_fill(228, 6, 8, 8, lsyx_partner_present() ? LC_GREEN : LC_PANEL);
     /* the big line: the chord if 3+ held, else the last note, else the last chord played from the pads */
     big[0] = 0; sub[0] = 0;
@@ -594,7 +596,7 @@ static void stage1_draw(struct lctx *x)
         if (note < 128u) ld_staff(4, 116, note);
     }
     ld_text(84, 122, s1_chord_mode ? "CHORD KEYS" : "SINGLE KEYS", 0, LC_DIM);
-    ld_text(84, 140, "GLO+SCL TOGGLES", 0, LC_PANEL);
+    ld_text(84, 140, "GLO+SCL TOGGLES", 0, LC_DIM);
 #endif
     /* the drill / lesson prompt */
     line[0] = 0;
@@ -608,13 +610,13 @@ static void stage1_draw(struct lctx *x)
     } else if (ls) {
         ld_bar_text(158, ls->prompt ? ls->prompt : "", ls->type == DR_TEXT ? LC_AMBER : LC_PANEL, ls->type == DR_TEXT ? LC_BG : LC_AMBER);
     } else if (lresult.valid) {
-        ld_text(4, 160, LBL_REC ": HEAR IT AGAIN  ARP: NEXT", 0, LC_AMBER);
+        ld_text(4, 160, LBL_REC ": HEAR IT   ARP: NEXT", 0, LC_AMBER);
     } else {
         n = ls_cat(line, 0, sizeof line, "ARP: L");
         n = ls_num(line, n, sizeof line, s1_lesson_pick + 1u); n = ls_cat(line, n, sizeof line, " ");
         ls_cat(line, n, 30, lessons[s1_lesson_pick % lesson_count].title);   /* (one line: 29 characters) */
         ld_text(4, 160, line, 0, LC_AMBER);
-        ld_text(4, 178, LBL_PLAY ": A DRILL   " LBL_GLO "+SEQ: HELP", 0, LC_PANEL);
+        ld_text(4, 178, LBL_PLAY ": START A DRILL", 0, LC_DIM);
     }
     /* the lesson title and progress */
     if (lesson_running()) {
