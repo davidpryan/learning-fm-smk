@@ -31,8 +31,9 @@ def product_of(raw):                           # the identity: one marker byte a
 
 
 def main(version, out, pkgs):
-    out = Path(out)
+    out = Path(out).resolve()                     # (SLOOP's make_site runs in sloop/: absolute paths for it)
     out.mkdir(parents=True, exist_ok=True)
+    pkgs = [Path(p).resolve() for p in pkgs]
     rows = []
     prov = {"version": version, "commit": os.environ.get("GITHUB_SHA", subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()),
             "sloop_upstream": (ROOT / "sloop" / "UPSTREAM.txt").read_text().strip() if (ROOT / "sloop" / "UPSTREAM.txt").exists() else "?",
