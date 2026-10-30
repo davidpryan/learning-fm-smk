@@ -25,6 +25,9 @@ step 0.3. Check: keys sound, pads sound, SEQ pages, HOME menu.
 
 ## 2. Enter LEARN mode
 
+(If a SLOOP project you care about is in working memory, save it to a slot
+first: the learn pages write into the live tracks.)
+
 Hold **GLO + HOME** for two seconds (on the SMK-37, the buttons that
 HARDWARE CALIBRATION mapped to GLO and HOME; the HOME menu may open at 0.7 s,
 that is expected, keep holding). The screen should show page 1 with the

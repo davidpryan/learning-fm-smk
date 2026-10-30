@@ -20,4 +20,10 @@ done
 $CC -O1 -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -DFELUCCA_LEARN=1 -DLEARN_STAGE=4 \
     -Isloop/build/gen -Isloop/firmware/src -Isloop/firmware/hal -Isloop/tests -Ilearn \
     -o build/host/learn_ui_test_w learn/tests/learn_ui_test.c -lm 2>&1 | grep -E "^learn/[a-z0-9_]+\.[ch]:" && { echo "warnings in learn/"; exit 1; } || true
+# the whole layer under AddressSanitizer + UBSan (SLOOP's own engines shift negative values: that check is off, as in its suite)
+for t in learn_ui_test learn_s2_test learn_s3_test learn_s4_test; do
+  $CC -O1 -g -w -fsanitize=address,undefined -fno-sanitize=shift -fno-sanitize-recover=undefined -DFELUCCA_LEARN=1 -DLEARN_STAGE=4 \
+      -Isloop/build/gen -Isloop/firmware/src -Isloop/firmware/hal -Isloop/tests -Ilearn -o build/host/san_$t learn/tests/$t.c -lm
+  ASAN_OPTIONS=detect_leaks=0 build/host/san_$t build/host > build/host/san_$t.log 2>&1 || { tail -20 build/host/san_$t.log; echo "sanitizer: $t failed"; exit 1; }
+done
 echo "HOST TESTS PASSED"

@@ -101,7 +101,7 @@ int main(int argc, char **argv)
         unsigned taps = 0;
         while (tr.state == TS_SCORING && taps < 64) {
             int32_t rel = (int32_t)(fm1_ms - tr.t0), near = (rel + (int32_t)tr.step_ms / 2) / (int32_t)tr.step_ms;
-            if (near >= 0 && (near % 4) == 0 && !tr.hit_flag[near] && rel >= near * (int32_t)tr.step_ms) { key(0); taps++; }
+            if (near >= 0 && near < (int32_t)tr.count && (near % 4) == 0 && !tr.hit_flag[near] && rel >= near * (int32_t)tr.step_ms) { key(0); taps++; }
             frame();
         }
         for (i = 0; i < 100 && tr.state == TS_SCORING; i++) frame();

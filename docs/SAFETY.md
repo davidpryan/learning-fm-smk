@@ -18,6 +18,13 @@ the Bluetooth pairing area (BTIF), the factory calibration record
 (USRTRIM, `trimdat`), and the chip key. The SMK-37 board layer documents
 these ranges and asserts them.
 
+**LEARN mode works in SLOOP's live project.** Pages 2–4 write their loop
+into the four tracks and page 1 turns the arpeggiators off, and SLOOP's
+autosave then keeps that as the music in progress. This cannot harm the
+device, but it replaces whatever loop you had in SLOOP's working memory:
+**save your SLOOP project to a slot before entering LEARN mode** if you care
+about it.
+
 ## Risks and what protects you
 
 | Risk | Likelihood | Protection |
