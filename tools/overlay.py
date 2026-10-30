@@ -56,6 +56,21 @@ def replace_once(path, pattern, repl):
         sys.exit(f"overlay: pattern matched {n} times (expected 1) in {path}: {pattern}")
     _write(path, new)
 
+def patch_build_size(out):
+    """The learn layer is control-task UI code; build it at -Oz like the
+    vendor's own UI and storage units so the image fits the fixed Flash
+    layout (453,921 bytes for the application on the SMK-37; the first
+    Stage 1 build at -O2 was 21 KB over). One edit: app/learn/* joins the
+    vendor's existing -Oz rule."""
+    bp = os.path.join(out, "sdk", "Build.ps1")
+    src = _read(bp)
+    anchor = ")) { $options += '-Oz' }"
+    n = src.count(anchor)
+    if n != 1:
+        sys.exit(f"overlay: -Oz anchor found {n}x in Build.ps1")
+    src = src.replace(anchor, ") -or $source.StartsWith('app/learn/')) { $options += '-Oz' }")
+    _write(bp, src)
+
 def patch_build_for_linux(out):
     """Let the vendor Build.ps1 run under pwsh on Linux with JieLi's Linux
     toolchain (jieli-linux-toolchains-*, the same clang 4.0.1 for pi32v2).
@@ -168,6 +183,7 @@ def assemble(board, stage, out, model="elite", host_os="windows"):
     else:
         replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_8[0-9]{6}"[ \t]*\r?$', f'#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_{number}"')
         replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_8[0-9]{6}"[ \t]*\r?$', f'#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_{number}"')
+    patch_build_size(out)
     if host_os == "linux":
         patch_build_for_linux(out)
     with open(os.path.join(out, "LEARN-BUILD.txt"), "w", encoding="utf-8") as fh:

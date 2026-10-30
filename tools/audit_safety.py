@@ -91,10 +91,20 @@ def diff_tree(board, stage, tree=None):
         if rel == "app/version.h":
             ok = all(("FM1_RELEASE_VERSION" in l or "FM1_UPDATE_PRODUCT" in l or not l.strip()) for l in added + removed)
         elif rel == "sdk/Build.ps1":
+            # The -Oz rule gains app/learn/ on every host; the Linux patch is allowed only with its marker file.
+            oz = [l for l in added + removed if "$options += '-Oz'" in l]
+            added = [l for l in added if l not in oz]; removed = [l for l in removed if l not in oz]
+            oz_ok = len(oz) == 2 and any("StartsWith('app/learn/')" in l for l in oz)
+            if not added and not removed:
+                ok = oz_ok
+                if not ok:
+                    print(f"UNEXPECTED EDIT {board}-s{stage} {rel}: {oz}")
+                    bad += 1
+                continue
             # Removed lines may also be the two bookkeeping lines of the replaced Windows hash loop.
             extra_removed = {"        $name = $entry.Name", "        $file = Join-Path $Toolchain $name"}
             extra_added = set()
-            ok = (os.path.isfile(os.path.join(tree, "LINUX-BUILD-PATCH.txt")) and all(BUILD_PS1_ALLOWED.search(l) or l in extra_added for l in added)
+            ok = (oz_ok and os.path.isfile(os.path.join(tree, "LINUX-BUILD-PATCH.txt")) and all(BUILD_PS1_ALLOWED.search(l) or l in extra_added for l in added)
                   and all(BUILD_PS1_ALLOWED.search(l) or l in extra_removed for l in removed))
         else:
             ok = not removed and all(("learn_" in l and "extern" in l) for l in added)
