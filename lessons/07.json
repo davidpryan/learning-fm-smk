@@ -1,0 +1,32 @@
+{
+  "title": "Three Chords",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "chord",
+      "count": 8,
+      "degrees": [
+        1,
+        4,
+        5
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 75,
+      "prompt": "I, IV OR V?"
+    },
+    {
+      "type": "progression",
+      "count": 2,
+      "degrees": [
+        1,
+        4,
+        5
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 75,
+      "prompt": "I - IV - V"
+    }
+  ]
+}

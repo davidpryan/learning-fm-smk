@@ -1,0 +1,33 @@
+{
+  "title": "Your First Chord",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "3 NOTES TOGETHER = A CHORD"
+    },
+    {
+      "type": "chord",
+      "count": 4,
+      "degrees": [
+        1
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 60,
+      "prompt": "PRESS THE GREEN PAD"
+    },
+    {
+      "type": "chord",
+      "count": 6,
+      "degrees": [
+        1,
+        5
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 70,
+      "prompt": "GREEN (I) OR ORANGE (V)?"
+    }
+  ]
+}

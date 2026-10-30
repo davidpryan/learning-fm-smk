@@ -1,0 +1,23 @@
+{
+  "title": "ii - V - I",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "THE JAZZ TURNAROUND"
+    },
+    {
+      "type": "progression",
+      "count": 3,
+      "degrees": [
+        2,
+        5,
+        1
+      ],
+      "key": "C major",
+      "seventh": true,
+      "target": 75,
+      "prompt": "ii7 - V7 - Imaj7"
+    }
+  ]
+}

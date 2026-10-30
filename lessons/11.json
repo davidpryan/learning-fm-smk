@@ -1,0 +1,30 @@
+{
+  "title": "New Key: G",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "SAME SHAPES, NEW HOME: G"
+    },
+    {
+      "type": "scale",
+      "count": 1,
+      "key": "G major",
+      "target": 75,
+      "prompt": "G MAJOR, UP THE SCALE"
+    },
+    {
+      "type": "progression",
+      "count": 2,
+      "degrees": [
+        1,
+        4,
+        5
+      ],
+      "key": "G major",
+      "seventh": false,
+      "target": 75,
+      "prompt": "I - IV - V IN G"
+    }
+  ]
+}

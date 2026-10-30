@@ -1,0 +1,26 @@
+{
+  "title": "First Sounds",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "PRESS ANY KEY. THAT IS A NOTE"
+    },
+    {
+      "type": "text",
+      "prompt": "THE SCREEN NAMES EVERY NOTE"
+    },
+    {
+      "type": "echo",
+      "count": 5,
+      "degrees": [
+        1,
+        2,
+        3
+      ],
+      "key": "C major",
+      "target": 50,
+      "prompt": "COPY THE NOTE. ANY OCTAVE OK"
+    }
+  ]
+}

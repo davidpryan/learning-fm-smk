@@ -1,0 +1,24 @@
+{
+  "title": "Up The Steps",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "A SCALE IS A LADDER OF NOTES"
+    },
+    {
+      "type": "scale",
+      "count": 1,
+      "key": "C major",
+      "target": 60,
+      "prompt": "FOLLOW THE LIT KEY UPWARD"
+    },
+    {
+      "type": "scale",
+      "count": 1,
+      "key": "C major",
+      "target": 70,
+      "prompt": "AGAIN, A LITTLE STEADIER"
+    }
+  ]
+}

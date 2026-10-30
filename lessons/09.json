@@ -1,0 +1,30 @@
+{
+  "title": "Minor Mood",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "MINOR: SAME KEYS, SADDER HOME"
+    },
+    {
+      "type": "scale",
+      "count": 1,
+      "key": "A minor",
+      "target": 70,
+      "prompt": "A MINOR, UP THE SCALE"
+    },
+    {
+      "type": "chord",
+      "count": 6,
+      "degrees": [
+        1,
+        4,
+        5
+      ],
+      "key": "A minor",
+      "seventh": false,
+      "target": 70,
+      "prompt": "i, iv OR v?"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "title": "Neighbors",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "echo",
+      "count": 10,
+      "degrees": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "key": "C major",
+      "target": 70,
+      "prompt": "FIVE NOTES. COPY EACH ONE"
+    }
+  ]
+}

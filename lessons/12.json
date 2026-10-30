@@ -1,0 +1,27 @@
+{
+  "title": "New Key: F",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "scale",
+      "count": 1,
+      "key": "F major",
+      "target": 75,
+      "prompt": "F MAJOR, MIND THE Bb"
+    },
+    {
+      "type": "progression",
+      "count": 2,
+      "degrees": [
+        1,
+        5,
+        6,
+        4
+      ],
+      "key": "F major",
+      "seventh": false,
+      "target": 75,
+      "prompt": "I - V - vi - IV IN F"
+    }
+  ]
+}

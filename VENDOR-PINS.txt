@@ -1,0 +1,4 @@
+# Pinned upstream commits. vendor/ is vendored verbatim in this tree; the
+# same commits are what .gitmodules points at if you prefer submodules.
+fm1_open   4c7496daac04a95ff10d1afdcc8f9ead2dbabc41  (FM1 Open V14, 2026-10-21)
+smk37_open b2d6bcbcd724adb13bcf85e44cfa16bb2c8153a8  (SMK37 OPEN V01, 2026-10-24)

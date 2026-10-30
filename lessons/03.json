@@ -1,0 +1,21 @@
+{
+  "title": "Home Note",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "THE ROOT IS HOME. 5TH IS NEXT"
+    },
+    {
+      "type": "echo",
+      "count": 8,
+      "degrees": [
+        1,
+        5
+      ],
+      "key": "C major",
+      "target": 70,
+      "prompt": "ROOT OR FIFTH? COPY IT"
+    }
+  ]
+}

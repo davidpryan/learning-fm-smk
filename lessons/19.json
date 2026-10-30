@@ -1,0 +1,23 @@
+{
+  "title": "Chord Recall",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "chord",
+      "count": 12,
+      "degrees": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 85,
+      "prompt": "ANY DEGREE. TRUST YOUR EAR"
+    }
+  ]
+}

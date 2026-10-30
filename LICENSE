@@ -1,0 +1,9 @@
+This project's own files are licensed under the GNU General Public License
+version 3 only, WITH the same additional permission (SDK linking exception)
+that M-VAVE grants for the FM1 Open and SMK37 Open APP sources. See
+vendor/fm1_open/LICENSE.md and vendor/smk37_open/LICENSE.md for the full
+text of the licence and the exception, and vendor/*/THIRD_PARTY.md for the
+terms of the binary SDKs and third-party components that built packages
+contain.
+
+SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception

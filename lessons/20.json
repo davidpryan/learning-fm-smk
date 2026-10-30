@@ -1,0 +1,45 @@
+{
+  "title": "Graduation",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "ALL OF IT AT ONCE. YOU CAN"
+    },
+    {
+      "type": "echo",
+      "count": 10,
+      "degrees": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "key": "C major",
+      "target": 90,
+      "prompt": "TEN NOTES AT 90%"
+    },
+    {
+      "type": "progression",
+      "count": 4,
+      "degrees": [
+        1,
+        5,
+        6,
+        4
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 90,
+      "prompt": "FOUR ROUNDS, FULL TEMPO"
+    }
+  ],
+  "unlocks": [
+    "stage2",
+    "stage3",
+    "stage4"
+  ]
+}

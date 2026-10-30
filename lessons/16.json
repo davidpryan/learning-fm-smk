@@ -1,0 +1,24 @@
+{
+  "title": "Relative Minor",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "vi IS MINOR'S HOME IN DISGUISE"
+    },
+    {
+      "type": "progression",
+      "count": 2,
+      "degrees": [
+        6,
+        4,
+        1,
+        5
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 75,
+      "prompt": "vi - IV - I - V"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Fast Hands",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "scale",
+      "count": 2,
+      "key": "C major",
+      "target": 90,
+      "prompt": "TWICE UP, NO SLOW MODE"
+    }
+  ]
+}

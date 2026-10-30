@@ -1,0 +1,24 @@
+{
+  "title": "The Four-Chord Song",
+  "stage": 1,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "I-V-vi-IV: A THOUSAND HITS"
+    },
+    {
+      "type": "progression",
+      "count": 3,
+      "degrees": [
+        1,
+        5,
+        6,
+        4
+      ],
+      "key": "C major",
+      "seventh": false,
+      "target": 75,
+      "prompt": "I - V - vi - IV"
+    }
+  ]
+}
