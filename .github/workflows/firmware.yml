@@ -54,7 +54,9 @@ jobs:
           ./build.sh 2>&1 | tee ../build-${{ matrix.name }}.log
           ls -l build/*.fwsc
       - name: Headroom
-        run: grep -E "image [0-9]+ B|RAM|pool|exceeds" build-${{ matrix.name }}.log || true
+        run: |
+          { echo "### ${{ matrix.name }}"; echo; echo '```'; grep -E "image [0-9]+ B|RAM|pool|lowram|exceeds" build-${{ matrix.name }}.log || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          grep -E "image [0-9]+ B|RAM|pool|lowram|exceeds" build-${{ matrix.name }}.log || true
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
