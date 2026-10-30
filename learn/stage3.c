@@ -265,7 +265,7 @@ static void take_capture(struct lctx *x)
     unsigned notes, in_key = 0, s, score;
     const struct lesson_step *ls;
     uint8_t p[3];
-    if (s3_take_count == TAKES) { memmove(s3_takes[0], s3_takes[1], sizeof s3_takes[0] * (TAKES - 1)); s3_take_count = TAKES - 1; }
+    if (s3_take_count == TAKES) { unsigned i; for (i = 0; i + 1u < TAKES; i++) memcpy(s3_takes[i], s3_takes[i + 1], sizeof s3_takes[0]); s3_take_count = TAKES - 1; }   /* (no memmove on the device) */
     memcpy(s3_mel_src, trk[LT_KEYS].step, sizeof s3_mel_src);   /* (what was taped: the shadow renders from it) */
     memcpy(s3_takes[s3_take_count], s3_mel_src, sizeof s3_mel_src);
     s3_take_cur = s3_take_count; s3_take_count++;
