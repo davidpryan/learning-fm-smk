@@ -10,6 +10,13 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release X.Y (empty: a plain build). Makes the vX.Y tag, the install site and the GitHub release."
+        required: false
+        default: ""
+env:
+  REL_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', inputs.version) }}
 permissions:
   contents: read
 concurrency:
@@ -85,7 +92,7 @@ jobs:
         run: |
           set +e
           rel=""
-          case "$GITHUB_REF_NAME" in v[0-9].[0-9]*) rel="--release ${GITHUB_REF_NAME#v}";; esac
+          case "$REL_VERSION" in v[0-9].[0-9]*) rel="--release ${REL_VERSION#v}";; esac
           ./build.sh $rel 2>&1 | tee ../build-${{ matrix.name }}.log
           st=${PIPESTATUS[0]}
           if [ "$st" != 0 ]; then   # the errors as annotations too (readable through the API when the log is not)
@@ -110,7 +117,7 @@ jobs:
 
   site:
     # a tag vX.Y: the install site (one installer page per device) on GitHub Pages, and a release with the packages
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -131,7 +138,7 @@ jobs:
           path: pkgs
       - name: Site
         run: |
-          ver="${GITHUB_REF_NAME#v}"
+          ver="${REL_VERSION#v}"
           elite=$(ls pkgs/learn-elite/sloop/build/*.fwsc | head -1)
           fm1=$(ls pkgs/learn-fm1/sloop/build/*.fwsc | head -1)
           python3 tools/make_site.py "$ver" site "$elite" "$fm1"
@@ -149,7 +156,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ver="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" site/*.fwsc site/*.sha256 site/provenance.json \
+          ver="${REL_VERSION#v}"
+          gh release create "$REL_VERSION" --target "$GITHUB_SHA" site/*.fwsc site/*.sha256 site/provenance.json \
             --title "Learn firmware $ver" \
             --notes "One firmware per device, four pages. Install from the site: ${{ steps.deploy.outputs.page_url }} — read docs/SAFETY.md first. Checksums in the .sha256 sidecars; provenance.json names the commit and the SLOOP upstream commit."
