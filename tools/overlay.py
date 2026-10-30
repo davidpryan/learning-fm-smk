@@ -27,26 +27,34 @@ BOARDS = {
 STAGE_NAMES = {1: "Lantern/Ember", 2: "Pulse/Root", 3: "Shadow/Tape", 4: "Stage/Scribe"}
 MODELS = ("elite", "pro")  # SMK-37 model; the app source is shared, the package identity differs
 
+def _read(path):
+    """Read as text with the file's own line endings preserved (newline="")."""
+    with open(path, encoding="utf-8", newline="") as fh:
+        return fh.read()
+
+def _write(path, src):
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(src)
+
 def insert_after(path, anchor, text, count=1):
-    with open(path, encoding="utf-8") as fh:
-        src = fh.read()
+    src = _read(path)
+    if "\r\n" in src:
+        anchor = anchor.replace("\n", "\r\n"); text = text.replace("\n", "\r\n")
     n = src.count(anchor)
     if n != count:
         sys.exit(f"overlay: anchor found {n} times (expected {count}) in {path}:\n  {anchor!r}")
     if text in src:
         sys.exit(f"overlay: hook already present in {path}")
     src = src.replace(anchor, anchor + text)
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(src)
+    _write(path, src)
 
 def replace_once(path, pattern, repl):
-    with open(path, encoding="utf-8") as fh:
-        src = fh.read()
-    new, n = re.subn(pattern, repl, src, flags=re.M)
+    src = _read(path)
+    cr = "\r" if "\r\n" in src else ""
+    new, n = re.subn(pattern, repl + cr, src, flags=re.M)
     if n != 1:
         sys.exit(f"overlay: pattern matched {n} times (expected 1) in {path}: {pattern}")
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(new)
+    _write(path, new)
 
 def assemble(board, stage, out, model="elite"):
     b = BOARDS[board]
@@ -92,12 +100,12 @@ def assemble(board, stage, out, model="elite"):
     version = f"V5{stage}"
     number = 8000000 + 50 + stage
     vh = os.path.join(app, "version.h")
-    replace_once(vh, r'^#define FM1_RELEASE_VERSION "V[0-9]+"[ \t]*$', f'#define FM1_RELEASE_VERSION "{version}"')
+    replace_once(vh, r'^#define FM1_RELEASE_VERSION "V[0-9]+"[ \t]*\r?$', f'#define FM1_RELEASE_VERSION "{version}"')
     if board == "fm1":
-        replace_once(vh, r'^#define FM1_UPDATE_PRODUCT "FM-1_8[0-9]{6}"[ \t]*$', f'#define FM1_UPDATE_PRODUCT "FM-1_{number}"')
+        replace_once(vh, r'^#define FM1_UPDATE_PRODUCT "FM-1_8[0-9]{6}"[ \t]*\r?$', f'#define FM1_UPDATE_PRODUCT "FM-1_{number}"')
     else:
-        replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_8[0-9]{6}"[ \t]*$', f'#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_{number}"')
-        replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_8[0-9]{6}"[ \t]*$', f'#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_{number}"')
+        replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_8[0-9]{6}"[ \t]*\r?$', f'#define FM1_UPDATE_PRODUCT_PRO "SMK-37 Pro_{number}"')
+        replace_once(vh, r'^#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_8[0-9]{6}"[ \t]*\r?$', f'#define FM1_UPDATE_PRODUCT_ELITE "SMK-37 Elite_{number}"')
     with open(os.path.join(out, "LEARN-BUILD.txt"), "w", encoding="utf-8") as fh:
         fh.write(f"board={board}\nstage={stage}\nname={STAGE_NAMES[stage]}\nversion={version}\nmodel={model if board == 'smk37' else '-'}\n")
     print(f"overlay: {board} stage {stage} -> {os.path.relpath(out, ROOT)}")

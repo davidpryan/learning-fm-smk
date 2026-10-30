@@ -1,0 +1,12 @@
+# Vendor sources are hashed against sdk/manifest.json by the vendor build and
+# patched by anchored text edits; keep their bytes identical on every OS.
+* text=auto eol=lf
+*.fwsc binary
+*.bin binary
+*.a binary
+*.png binary
+*.webp binary
+*.wasm binary
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cs text eol=crlf

@@ -11,7 +11,7 @@
    files tools/overlay.py is allowed to touch, with exactly the hook lines
    it is meant to add. Anything else means a reviewer has not seen it.
 """
-import os, re, subprocess, sys, glob, argparse
+import os, re, sys, glob, argparse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FORBIDDEN = [
@@ -37,38 +37,61 @@ def scan_learn():
                 bad += 1
     return bad
 
+def _files(root, skip):
+    out = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in skip]
+        for f in filenames:
+            full = os.path.join(dirpath, f)
+            out[os.path.relpath(full, root).replace(os.sep, "/")] = full
+    return out
+
+def _lines(path):
+    with open(path, "rb") as fh:
+        return fh.read().replace(b"\r\n", b"\n").decode("utf-8", "replace").splitlines()
+
 def diff_tree(board, stage, tree=None):
+    """Pure-Python comparison (no external diff): portable across Linux, macOS and Windows runners."""
+    import difflib
     vendor = os.path.join(ROOT, "vendor", "fm1_open" if board == "fm1" else "smk37_open")
     tree = tree or os.path.join(ROOT, "build", "trees", f"{board}-s{stage}")
     if not os.path.isdir(tree):
         print(f"SKIP {board} stage {stage}: not assembled")
         return 0
     bad = 0
-    p = subprocess.run(["diff", "-rq", "--exclude=.git", "--exclude=build", "--exclude=host", "--exclude=learn",
-                        "--exclude=LEARN-BUILD.txt", vendor, tree], capture_output=True, text=True)
-    for line in p.stdout.splitlines():
-        m = re.match(r"Files (.*) and (.*) differ", line)
-        if m:
-            rel = os.path.relpath(m.group(1), vendor)
-            if rel not in ALLOWED_DIFF:
-                print(f"UNEXPECTED DIFF {board}-s{stage}: {rel}")
-                bad += 1
-            else:
-                d = subprocess.run(["diff", m.group(1), m.group(2)], capture_output=True, text=True).stdout
-                added = [l[2:] for l in d.splitlines() if l.startswith("> ")]
-                removed = [l[2:] for l in d.splitlines() if l.startswith("< ")]
-                if rel == "app/version.h":
-                    ok = all(("FM1_RELEASE_VERSION" in l or "FM1_UPDATE_PRODUCT" in l or not l.strip()) for l in added + removed)
-                else:
-                    ok = not removed and all(("learn_" in l and "extern" in l) for l in added)
-                if not ok:
-                    print(f"UNEXPECTED EDIT {board}-s{stage} {rel}:\n{d}")
-                    bad += 1
-        elif line.startswith("Only in") and tree in line:
-            what = line.split(": ")[1]
-            if what not in ("learn", "LEARN-BUILD.txt", "host"):
-                print(f"UNEXPECTED FILE {board}-s{stage}: {line}")
-                bad += 1
+    skip = {".git", "build", "host", "learn"}
+    v = _files(vendor, skip)
+    t = _files(tree, skip)
+    for rel in sorted(set(t) - set(v)):
+        if rel not in ("LEARN-BUILD.txt",):
+            print(f"UNEXPECTED FILE {board}-s{stage}: {rel}")
+            bad += 1
+    for rel in sorted(set(v) - set(t)):
+        print(f"MISSING VENDOR FILE {board}-s{stage}: {rel}")
+        bad += 1
+    for rel in sorted(set(v) & set(t)):
+        a, b = _lines(v[rel]), _lines(t[rel])
+        if a == b:
+            continue
+        if rel not in ALLOWED_DIFF:
+            print(f"UNEXPECTED DIFF {board}-s{stage}: {rel}")
+            bad += 1
+            continue
+        added, removed = [], []
+        for line in difflib.unified_diff(a, b, lineterm="", n=0):
+            if line.startswith("+++") or line.startswith("---") or line.startswith("@@"):
+                continue
+            if line.startswith("+"):
+                added.append(line[1:])
+            elif line.startswith("-"):
+                removed.append(line[1:])
+        if rel == "app/version.h":
+            ok = all(("FM1_RELEASE_VERSION" in l or "FM1_UPDATE_PRODUCT" in l or not l.strip()) for l in added + removed)
+        else:
+            ok = not removed and all(("learn_" in l and "extern" in l) for l in added)
+        if not ok:
+            print(f"UNEXPECTED EDIT {board}-s{stage} {rel}: +{added} -{removed}")
+            bad += 1
     return bad
 
 def main():
