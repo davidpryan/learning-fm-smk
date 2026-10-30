@@ -169,7 +169,7 @@ struct lesson {
 /* ---- the stage context (main side) ---- */
 struct lctx {
     uint32_t buttons;             /* fm1_in.buttons as logical LB bits this poll */
-    uint32_t btn_down;            /* logical LB press edges this poll */
+    uint32_t btn_down, btn_up;    /* logical LB press / release edges this poll */
     uint32_t keys_down;           /* 1 = a key or pad went down this poll (TEXT steps continue on it) */
     uint32_t now;                 /* fm1_ms */
     int octave;                   /* -2..+2 */

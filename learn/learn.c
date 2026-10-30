@@ -10,6 +10,7 @@
 #include "sysex.c"
 #include "stage1.c"
 #if LEARN_STAGE >= 2
+#include "song.c"
 #include "stage2.c"
 #endif
 #if LEARN_STAGE >= 3

@@ -88,6 +88,9 @@ jobs:
             exit "$st"
           fi
           ls -l build/*.fwsc
+      - name: Sizes
+        if: always()
+        run: tools/ci_sizes.sh sloop/build/felucca.elf ${{ matrix.name }}
       - name: Headroom
         run: |
           { echo "### ${{ matrix.name }}"; echo; echo '```'; grep -E "image [0-9]+ B|RAM|pool|lowram|exceeds" build-${{ matrix.name }}.log || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

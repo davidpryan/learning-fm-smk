@@ -307,15 +307,19 @@ static void learn_input(uint32_t pressed, uint32_t now_ticks)
     uint8_t kind, a, b;
     (void)now_ticks;
     lx.now = now;
-    lx.buttons = 0;
-    lx.btn_down = 0;
-    lx.keys_down = 0;
-    for (l = 0; l < NB; l++) {
-        uint32_t bit = 1u << panel.btn[l];
-        if (fm1_in.buttons & bit)
-            lx.buttons |= 1u << l;
-        if (pressed & bit)
-            lx.btn_down |= 1u << l;
+    {
+        uint32_t prev = lx.buttons;
+        lx.buttons = 0;
+        lx.btn_down = 0;
+        lx.keys_down = 0;
+        for (l = 0; l < NB; l++) {
+            uint32_t bit = 1u << panel.btn[l];
+            if (fm1_in.buttons & bit)
+                lx.buttons |= 1u << l;
+            if (pressed & bit)
+                lx.btn_down |= 1u << l;
+        }
+        lx.btn_up = prev & ~lx.buttons;
     }
     if (pressed)
         ui_input_ms = now;
