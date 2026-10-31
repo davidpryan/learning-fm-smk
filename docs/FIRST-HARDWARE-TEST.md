@@ -54,6 +54,22 @@ Then page 2 (SEQ): PLAY should start the default loop (four kicks, two
 snares, hats, chords I V vi IV, a bass under the kick). If audio stutters
 or a note hangs, note what you did and press HOME, then GLO+HOME.
 
+## 3b. What 0.4 changed that only the device can show
+
+The host suite renders every screen, but these depend on the real panel,
+pads, LCD or flash:
+
+| Check | Expect |
+| --- | --- |
+| A page 1 echo drill, answered wrong | nothing lit while you listen and answer; after the miss the key lights (FM-1: its LED), the note is named and plays |
+| Chord numbers on the SMK pad palette | `ii iii vi vii°` in lower case, readable at arm's length; the bottom row `I7 … viiø` |
+| The SMK pads on pages 3 and 4 | no pad that should be usable looks off (dim pads are now half brightness); empty store pads a faint white |
+| SMK: K1 in LEARN mode | always the volume, even with HOME > KNOB LAYOUT = SMK; after GLOBE+PATCH the menu's layout is back |
+| SMK: lesson progress | pass lesson 1, wait for the loop to be stopped and 2 s without touching anything, power off and on, enter LEARN: page 1 says `ARP: L2 …` and K7 shows `L1 … *` |
+| FM-1: lesson progress | resets at power-off (expected: no spare settings byte) |
+| GLO + SEQ during a drill | the drill waits behind the help (no misses counted) |
+| Page 2 with the loop playing, many screen changes | no audio stutter (the screen redraws at most 25 times a second, as SLOOP) |
+
 ## 4. What to report
 
 Device and model, the package name and SHA-256, what you did, what the
