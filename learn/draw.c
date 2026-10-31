@@ -13,14 +13,57 @@ static void ld_frame(int x, int y, int w, int h, uint16_t c)
     ld_fill(x, y, 1, h, c);
     ld_fill(x + w - 1, y, 1, h, c);
 }
-static void ld_text(int x, int y, const char *s, unsigned big, uint16_t c)
+/* Text. SLOOP's glyph() shows capitals only, but roman numerals need their case (ii is minor, II major), so the
+ * layer draws FONT_S itself: real lower case, the degree sign (\xB0) and o-slash (\xF8). big = FONT_S at 2x.
+ * adv: the advance in pixels (0 = the font's; less packs a narrow cell). Host/review builds count any text that
+ * runs past the right edge (ld_overflow) so the suite can fail on it. */
+#ifdef LEARN_HOST
+static unsigned ld_overflow; static char ld_overflow_text[48];
+#endif
+static unsigned ld_gi(unsigned ch)
 {
-    int yy = y - ld_y0, h = big ? 32 : 16;
-    if (yy >= 120 || yy + h <= 0)
-        return;                                   /* wholly in the other half: nothing to do */
-    cv_text(x, yy, big ? &FONT_L : &FONT_S, s, c);
+    if (ch < FONT_S.first || ch > FONT_S.last || (ch >= 127u && ch < 160u))
+        ch = '?';
+    return ch - FONT_S.first;
 }
-static int ld_text_w(const char *s, unsigned big) { return (int)text_w(big ? &FONT_L : &FONT_S, s); }
+static int ld_text_a(int x, int y, const char *s, unsigned big, uint16_t c, int adv)
+{
+    int yy = y - ld_y0, sh = big ? 1 : 0, h = 16 << sh;
+#ifdef LEARN_HOST
+    {
+        int w = 0; const char *t = s;
+        for (; *t; t++) w += adv ? adv : FONT_S.adv[ld_gi((uint8_t)*t)] << sh;
+        if (x + w > LD_W + 1 && !ld_y0) { ld_overflow++; str_cpy(ld_overflow_text, s, sizeof ld_overflow_text); }
+    }
+#endif
+    if (yy >= 120 || yy + h <= 0) {
+        for (; *s; s++) x += adv ? adv : FONT_S.adv[ld_gi((uint8_t)*s)] << sh;
+        return x;                                 /* wholly in the other half: nothing to draw */
+    }
+    for (; *s; s++) {
+        unsigned gi = ld_gi((uint8_t)*s), w = FONT_S.bw[gi], gx, gy;
+        const uint8_t *gd = FONT_S.data + FONT_S.off[gi];
+        int ox = x - (FONT_S.pad << sh);
+        for (gy = 0; gy < FONT_S.h; gy++)
+            for (gx = 0; gx < w; gx++) {
+                unsigned i = gy * w + gx;
+                if ((gd[i >> 3] >> (7u - (i & 7u))) & 1u) {
+                    int px = ox + ((int)gx << sh), py = yy + ((int)gy << sh);
+                    cv_pset(px, py, c);
+                    if (sh) { cv_pset(px + 1, py, c); cv_pset(px, py + 1, c); cv_pset(px + 1, py + 1, c); }
+                }
+            }
+        x += adv ? adv : FONT_S.adv[gi] << sh;
+    }
+    return x;
+}
+static void ld_text(int x, int y, const char *s, unsigned big, uint16_t c) { ld_text_a(x, y, s, big, c, 0); }
+static int ld_text_w(const char *s, unsigned big)
+{
+    int w = 0;
+    for (; *s; s++) w += FONT_S.adv[ld_gi((uint8_t)*s)] << (big ? 1 : 0);
+    return w;
+}
 static void ld_text_c(int y, const char *s, unsigned big, uint16_t c)
 {
     int w = ld_text_w(s, big);
@@ -95,9 +138,18 @@ static void ld_staff(int x, int y, unsigned note)
     static const uint8_t SHARP[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
     int i, oct = (int)note / 12 - 1, step = (oct - 4) * 7 + STEP[note % 12u];   /* 0 = C4 */
     int ny = y + 24 - (step - 2) * 3;             /* E4 (step 2) sits on the bottom line, 3 px a step */
-    ld_fill(x, y - 10, 66, 48, LC_BG);
+    static const char *const CLEF[17] = {   /* a treble clef, 8 x 17 drawn 1 x 2: which staff this is */
+        "...##...", "..#..#..", "..#..#..", "..#.#...", "...##...", "...#....", "..##....", ".#.#....", "#..###..",
+        "#.##.##.", "#.#.#..#", ".#..#..#", "..###.#.", "....#...", "....#...", "..#.#...", "...#...."};
+    ld_fill(x, y - 6, 66, 42, LC_BG);
     for (i = 0; i < 5; i++)
         ld_fill(x, y + 24 - i * 6, 66, 1, LC_DIM);
+    for (i = 0; i < 17; i++) {
+        int c;
+        for (c = 0; c < 8; c++) if (CLEF[i][c] == '#') ld_fill(x + 2 + c, y - 4 + i * 2, 1, 2, LC_GREY);
+    }
+    if (note >= 128u)
+        return;                                   /* (no note: the staff alone) */
     if (step <= 0)                                /* ledger lines below (C4 and lower) */
         for (i = 0; i >= step; i -= 2)
             ld_fill(x + 24, y + 24 - (i - 2) * 3, 20, 1, LC_DIM);

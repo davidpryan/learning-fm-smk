@@ -44,7 +44,7 @@ static struct rec_entry s4_rec[REC_MAX]; static unsigned s4_rec_n; static uint8_
 static uint32_t s4_stop_at;
 static uint8_t s4_ghost[GHOST_MAX], s4_ghost_n, s4_ghost_pos, s4_perf[GHOST_MAX], s4_perf_n, s4_perf_late[GHOST_MAX];
 static uint8_t s4_ghost_energy_hit[GHOST_MAX], s4_follow_pad, s4_follow_blink, s4_press_timing;
-static uint8_t s4_replay_which, s4_replay_shown, s4_lesson_pick, s4_passed_once;
+static uint8_t s4_replay_which, s4_replay_shown, s4_passed_once;
 static uint8_t s4_mirror_slot = S4_NONE, s4_mirror_type;
 static char s4_hint[40]; static uint32_t s4_hint_until;
 
@@ -263,7 +263,7 @@ static void slot_hint(struct lctx *x, unsigned slot)
 }
 static const char *trans_hint(void)
 {
-    static const char *const h[TRN_COUNT] = {"NO EDIT BETWEEN SECTIONS", "DROP: DRUMS+BASS OUT, LAST BAR", "RISER: HATS DOUBLE, REVERB UP", "FILL: SNARE+HAT ROLL, LAST BAR", "HAND-OFF: MELODY FADES, CHORD EARLY"};
+    static const char *const h[TRN_COUNT] = {"NO EDIT BETWEEN SECTIONS", "DROP: DRUMS+BASS OUT LAST BAR", "RISER: HATS DOUBLE, REVERB UP", "FILL: SNARE+HAT ROLL LAST BAR", "HANDOFF: MEL FADES, CHD EARLY"};
     return h[s4_trans % TRN_COUNT];
 }
 
@@ -335,7 +335,7 @@ static void stage4_encoder(struct lctx *x, unsigned id, int delta)
     switch (id) {
     case 0: apply_energy((unsigned)((int)s4_energy + delta < 1 ? 1 : (int)s4_energy + delta > 8 ? 8 : (int)s4_energy + delta)); break;
     case 1: s4_store_type = (uint8_t)((s4_store_type + STY_COUNT + (delta > 0 ? 1u : STY_COUNT - 1u)) % STY_COUNT); learn_notice(TYPE_NM[s4_store_type], 700); break;
-    case 2: { int v = (int)s4_lesson_pick + delta; s4_lesson_pick = (uint8_t)(v < 0 ? 0 : v >= (int)lesson_count ? (int)lesson_count - 1 : v); learn_notice(lessons[s4_lesson_pick].title, 1200); p = s4_lesson_pick; lsyx_send(LCMD_LESSON, &p, 1); } break;
+    case 2: lesson_pick_turn(4, delta); break;
     case 3: { int v = (int)x->slow_percent + delta * 5; x->slow_percent = (unsigned)(v < 50 ? 50 : v > 100 ? 100 : v); p = (uint8_t)x->slow_percent; lsyx_send(LCMD_SLOW, &p, 1); } break;
     case 4: s4_trans = (uint8_t)((s4_trans + TRN_COUNT + (delta > 0 ? 1u : TRN_COUNT - 1u)) % TRN_COUNT); learn_notice(trans_hint(), 1200); p = s4_trans; lsyx_send(LCMD_TRANSITION, &p, 1); break;
     case 5: {                                     /* the tempo, +-10 % around the section's own */
@@ -364,7 +364,6 @@ static void stage4_sysex(struct lctx *x, unsigned cmd, const uint8_t *p, unsigne
     case LCMD_TRANSITION: if (n >= 1) { s4_trans = (uint8_t)(p[0] % TRN_COUNT); x->redraw = 1; } break;
     case LCMD_SECTION: if (n >= 4) { s4_mirror_slot = p[0]; s4_mirror_type = (uint8_t)(p[1] % STY_COUNT); x->redraw = 1; } break;
     case LCMD_PATH: if (n >= 2 && learn_page() == 4) { s4_follow_pad = p[0] == 0 ? (uint8_t)(p[1] + 1u) : 0u; x->redraw = 1; } break;
-    case LCMD_LESSON: if (n >= 1 && p[0] < lesson_count) s4_lesson_pick = p[0]; break;
     case LCMD_LOG: if (n >= 3 && p[1] >= 4) log_unlock(UNLOCK_STAGE4); break;
     default: break;
     }
@@ -397,7 +396,7 @@ static void stage4_control(struct lctx *x)
     }
     if (b & LB(LB_ARP)) {
         if (lesson_running()) { lesson_stop(); s4_ghost_n = 0; s4_follow_pad = 0; send_path(); learn_notice("LESSON STOPPED", 800); }
-        else { lesson_start(s4_lesson_pick); lesson_load_ghost(); if (!s4_ghost_n) learn_notice("NOT A SONG LESSON", 1000); }
+        else { lesson_start(lesson_pick(4)); lesson_load_ghost(); if (!lesson_running()) learn_notice("NO LESSON ON THIS PAGE", 1000); }
         x->redraw = 1;
     }
     ls = lesson_step();
@@ -461,7 +460,7 @@ static uint32_t stage4_pad_colour(unsigned pad)
     }
     slot = pad - 8u;
     if (s4_pad_down[pad]) return P_FULL(TYPE_PAD[s4_store_type]);
-    return s4_sec[slot].used ? P_DIM(TYPE_PAD[s4_sec[slot].type]) : 0x101010u;
+    return s4_sec[slot].used ? P_DIM(TYPE_PAD[s4_sec[slot].type]) : 0x282828u;   /* (empty: faint white, still a pad to press) */
 }
 
 /* ---- the screen ---- */
@@ -471,10 +470,9 @@ static void stage4_draw(struct lctx *x)
     unsigned n, i, atype = s4_active < SEC_MAX ? s4_sec[s4_active].type : s4_mirror_slot < SEC_MAX ? s4_mirror_type : STY_COUNT;
     unsigned ms = song_playing() || s4_recording ? x->now - s4_play_started : s4_elapsed, secs = ms / 1000u;
     const struct lesson_step *ls = lesson_step();
-    n = ls_cat(line, 0, sizeof line, LEARN_PADS ? "STAGE E" : "SCRIBE E"); n = ls_num(line, n, sizeof line, s4_energy); n = ls_cat(line, n, sizeof line, " ");
-    n = ls_num(line, n, sizeof line, lsong.tempo); n = ls_cat(line, n, sizeof line, "BPM");
-    if (s4_recording) n = ls_cat(line, n, sizeof line, " REC");
-    if (x->slow_percent < 100u) { n = ls_cat(line, n, sizeof line, " S"); ls_num(line, n, sizeof line, x->slow_percent); }
+    n = ls_num(line, 0, sizeof line, lsong.tempo); n = ls_cat(line, n, sizeof line, "BPM");
+    n = ls_cat(line, n, sizeof line, s4_recording ? " RECORDING" : song_playing() ? " PLAYING" : " STOPPED");
+    if (x->slow_percent < 100u) { n = ls_cat(line, n, sizeof line, " SLOW "); n = ls_num(line, n, sizeof line, x->slow_percent); ls_cat(line, n, sizeof line, "%"); }
     ld_text(4, 2, line, 0, s4_recording ? LC_RED : LC_DIM);
     ld_fill(228, 6, 8, 8, lsyx_partner_present() ? LC_GREEN : LC_PANEL);
     ld_text(4, 20, atype < STY_COUNT ? TYPE_NM[atype] : "LOOP", 1, atype < STY_COUNT ? TYPE_RGB[atype] : LC_TEXT);
@@ -482,7 +480,7 @@ static void stage4_draw(struct lctx *x)
     n = ls_cat(line, 0, sizeof line, "BAR "); n = ls_num(line, n, sizeof line, s4_bars_played + 1u); n = ls_cat(line, n, sizeof line, "/"); n = ls_num(line, n, sizeof line, lsong.bars);
     if (s4_queued < SEC_MAX) {
         unsigned beats_left = s4_qmode == QM_BEAT ? 1u : (song_beats() - ((song_step() / 4u) % song_beats()));
-        n = ls_cat(line, n, sizeof line, " > "); n = ls_cat(line, n, sizeof line, TYPE_NM[s4_sec[s4_queued].type]); n = ls_cat(line, n, sizeof line, " IN "); ls_num(line, n, sizeof line, beats_left);
+        n = ls_cat(line, n, sizeof line, " > "); n = ls_cat(line, n, sizeof line, TYPE_NM[s4_sec[s4_queued].type]); n = ls_cat(line, n, sizeof line, " IN "); n = ls_num(line, n, sizeof line, beats_left); ls_cat(line, n, sizeof line, beats_left == 1u ? " BEAT" : " BEATS");
     }
     ld_text(4, 54, line, 0, s4_queued < SEC_MAX ? LC_ORANGE : LC_CYAN);
     n = ls_num(line, 0, sizeof line, secs / 60u); line[n++] = ':'; line[n++] = (char)('0' + (secs % 60u) / 10u); line[n++] = (char)('0' + secs % 10u); line[n] = 0;
@@ -511,28 +509,30 @@ static void stage4_draw(struct lctx *x)
     }
     n = ls_cat(line, 0, sizeof line, "STORE AS "); ls_cat(line, n, sizeof line, TYPE_NM[s4_store_type]);
     ld_text(4, 120, line, 0, TYPE_RGB[s4_store_type]);
-    n = ls_cat(line, 0, sizeof line, LKN[4]); n = ls_cat(line, n, sizeof line, " "); n = ls_cat(line, n, sizeof line, TRANS_NM[s4_trans]); n = ls_cat(line, n, sizeof line, "  ENERGY ");
-    for (i = 0; i < 8u && n + 1u < sizeof line; i++) line[n++] = i < s4_energy ? '#' : '.'; line[n] = 0;
+    n = ls_cat(line, 0, sizeof line, "TRANSITION: "); ls_cat(line, n, sizeof line, TRANS_NM[s4_trans]);
     ld_text(4, 138, line, 0, LC_AMBER);
-    ld_text(4, 156, LEARN_PADS ? "PAD: SLOT " LBL_GLO "+PAD 9-16 STORE" : LBL_GLO "+KEY: SLOT  " LBL_SAVE ": STORE", 0, LC_DIM);
+    ld_text(4, 156, "ENERGY", 0, LC_DIM);         /* the energy: a bar of eight */
+    for (i = 0; i < 8u; i++) ld_fill(60 + (int)i * 14, 159, 12, 10, i < s4_energy ? (i < 3u ? LC_GREEN : i < 6u ? LC_AMBER : LC_RED) : LC_PANEL);
+    line[0] = (char)('0' + s4_energy); line[1] = 0; ls_cat(line, 1, sizeof line, "/8");
+    ld_text(176, 156, line, 0, LC_DIM);
     if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
-    else if (s4_recording) { n = ls_cat(line, 0, sizeof line, "RECORDING "); n = ls_num(line, n, sizeof line, s4_rec_n + 1u); ls_cat(line, n, sizeof line, " SECTIONS  " LBL_HOME ": STOP"); }
+    else if (s4_recording) { n = ls_cat(line, 0, sizeof line, "REC: "); n = ls_num(line, n, sizeof line, s4_rec_n + 1u); ls_cat(line, n, sizeof line, s4_rec_n ? " SECTIONS. " LBL_HOME ": STOP" : " SECTION. " LBL_HOME ": STOP"); }
     else ls_cat(line, 0, sizeof line, s4_active == S4_NONE ? (LEARN_PADS ? LBL_GLO "+PAD 9-16: STORE LOOP" : LBL_GLO "+KEY 9-16: STORE LOOP")
                                       : (LEARN_PADS ? "PAD 1-8: NEXT SECTION" : LBL_GLO "+KEY 1-8: NEXT SECTION"));
     ld_text(4, 174, line, 0, s4_recording ? LC_RED : LC_AMBER);
-    if (!ls && !s4_recording && !lesson_running()) ld_text(4, 192, LBL_REC ": RECORD THE SONG", 0, LC_DIM);
     if (lesson_running()) {
         const struct lesson *l = &lessons[lesson_running() - 1u];
-        n = ls_cat(line, 0, sizeof line, l->title); n = ls_cat(line, n, sizeof line, " "); n = ls_num(line, n, sizeof line, lesson_progress() + 1u); n = ls_cat(line, n, sizeof line, "/"); ls_num(line, n, sizeof line, l->step_count);
+        n = ls_cat(line, 0, sizeof line, "L"); n = ls_num(line, n, sizeof line, lesson_running()); n = ls_cat(line, n, sizeof line, " ");
+        n = ls_cat(line, n, sizeof line, l->title); n = ls_cat(line, n, sizeof line, " "); n = ls_num(line, n, sizeof line, lesson_progress() + 1u); n = ls_cat(line, n, sizeof line, "/"); ls_num(line, n, sizeof line, l->step_count);
+        line[29] = 0;
         ld_text(4, 192, line, 0, LC_PURPLE);
+    } else if (!s4_recording) {
+        ld_text(4, 192, s4_active == S4_NONE ? "THEN CHANGE IT, STORE AGAIN" : LBL_REC ": RECORD THE SONG", 0, LC_DIM);
+        if (!s4_ghost_n) { n = ls_cat(line, 0, sizeof line, "ARP: "); lesson_name(line + n, sizeof line - n, lesson_pick(4)); line[29] = 0; ld_text(4, 206, line, 0, LC_DIM); }
     }
     if (s4_ghost_n) {                             /* the replay strips: the ghost order, the performed order */
         for (i = 0; i < s4_ghost_n; i++) ld_fill(4 + (int)i * 28, 208, 24, 5, s4_replay_shown && s4_replay_which ? LC_PANEL : TYPE_RGB[s4_ghost[i]]);
         for (i = 0; i < s4_perf_n; i++) { unsigned ok = i < s4_ghost_n && s4_perf[i] == s4_ghost[i]; ld_fill(4 + (int)i * 28, 215, 24, 5, s4_replay_shown && !s4_replay_which ? LC_PANEL : ok ? (s4_perf_late[i] ? LC_YELLOW : LC_GREEN) : LC_RED); }
     }
-    {
-        const char *nt = learn_notice_text();
-        if (nt) ld_text(4, 222, nt, 0, LC_TEXT);
-        else if (s4_hint[0]) ld_text(4, 222, s4_hint, 0, LC_YELLOW);
-    }
+    if (s4_hint[0]) ld_text(4, 222, s4_hint, 0, LC_YELLOW);   /* (notices: the header bar, main.c) */
 }

@@ -1,0 +1,21 @@
+{
+  "title": "Tape A Take",
+  "stage": 3,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "THE TAPE RECORDS THE MELODY"
+    },
+    {
+      "type": "text",
+      "prompt": "SEQ REC+SEQ PLAY: ONE PASS",
+      "prompt_fm1": "REC+PLAY: TAPE ONE PASS"
+    },
+    {
+      "type": "reftake",
+      "notes": 4,
+      "target": 80,
+      "prompt": "4+ NOTES IN THE KEY"
+    }
+  ]
+}

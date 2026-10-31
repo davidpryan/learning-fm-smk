@@ -116,7 +116,7 @@ Transport on the four right-hand buttons:
 | FX | remove the selected shadow |
 | EDIT | select the next shadow slot |
 | LFO | play the why-hint demo for the selected shadow (source alone, then shadow alone) |
-| ARP | start the first stage-3 lesson / stop the lesson |
+| ARP | start the page's next lesson / stop it (GLO + K7, SMK GLOBE + K8: pick another) |
 
 Knobs on the FM-1: K1 octave, **K2 obedience** (GLO + K2 = density), K3
 velocity, K4 patch, K5 send pick, K6 send amount, K7 slow mode.
@@ -137,9 +137,16 @@ partner box can capture the whole loop.
 
 ## Lessons
 
-Step type 7 (`reftake`): the player tapes a pass on the selected track.
-`data[0]` is the minimum number of notes (default 4), `target` the
-percentage that must be in the key (default 80); a slow take never passes.
+Page 3 has five lessons (27-31: a first shadow, chord shadows, a take, a
+better take, ghost notes). ARP starts the next one; GLO + the slow knob picks
+another. Step type 7 (`reftake`): the player tapes a pass on the selected
+track. `data[0]` (JSON `notes`) is the minimum number of notes (default 4),
+`target` the percentage that must be in the key (default 80); a slow take
+never passes. A TEXT step continues on any key or pad.
+
+While a source is armed the lanes give way to the rule list (pad / key 9-16
+and the rule's name, the ones that fit the source bright), so the screen says
+which pad is which rule; help screen 4 lists them too.
 
 ## SysEx
 

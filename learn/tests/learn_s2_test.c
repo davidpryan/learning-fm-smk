@@ -2,6 +2,7 @@
 /* Stage 2 (Root, the FM-1 build) on SLOOP's UI harness: the song model lands in SLOOP's tracks, the loop runs,
  * chord keys write the loop, GLO + keys edit the grid, the melody recorder takes one pass, the rhythm trainer. */
 #define UI_PAGES_HARNESS_ONLY 1
+#define LEARN_HOST 1
 #include "../pre.h"
 #include "ui_pages_test.c"
 #include "../learn.c"

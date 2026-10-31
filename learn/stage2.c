@@ -30,10 +30,11 @@ static uint8_t s2_lane, s2_pad_mode, s2_track;
 static uint8_t s2_chord_arm, s2_rec_cursor, s2_mel_rec, s2_mel_wrapped, s2_mel_start, s2_mel_seen;
 static uint8_t s2_take_valid, s2_replay_which, s2_quant = 80;
 static uint8_t s2_pad_down[16], s2_rec_combo, s2_needs_write;
-static uint8_t s2_patch[4], s2_lesson_pick, s2_graduated;
+static uint8_t s2_patch[4], s2_graduated;
 static uint32_t s2_hold_since, s2_session_start;
 static uint8_t s2_hold_degree, s2_hold_hinted, s2_head;
 static char s2_big[16], s2_hint[40];
+static uint32_t s2_big_until;                     /* a knob's value shows 2 s, then the big line shows the state again */
 static uint32_t s2_hint_until;
 static step_t s2_raw[SONG_STEPS], s2_quant_cells[SONG_STEPS], s2_undo[SONG_STEPS];
 static uint8_t s2_undo_valid;
@@ -61,6 +62,7 @@ static void s2_set_big(const char *label, unsigned value, unsigned show_value)
 {
     unsigned n = ls_cat(s2_big, 0, sizeof s2_big, label);
     if (show_value) { n = ls_cat(s2_big, n, sizeof s2_big, " "); ls_num(s2_big, n, sizeof s2_big, value); }
+    s2_big_until = fm1_ms + 2000u;
 }
 static unsigned has_offbeat(uint16_t mask) { return (mask & 0xEEEEu) != 0u; }
 
@@ -106,10 +108,8 @@ static void groove_check(void)
 static void rhythm_lesson_done(unsigned passed, unsigned pct)
 {
     const struct lesson_step *ls = lesson_step();
-    unsigned reps, i;
-    if (!ls || ls->type != DR_RHYTHM) return;
-    reps = ls->count ? ls->count : 1u;            /* (the step's count is bars: one round settles it) */
-    for (i = 0; i < reps && lesson_step() == ls; i++) lesson_step_done(passed, pct);
+    if (!ls || ls->type != DR_RHYTHM) return;     /* (the step's count is bars: one round settles it) */
+    lesson_step_done(passed, pct);
 }
 
 /* ---- the chord loop ---- */
@@ -202,6 +202,15 @@ static void melody_finish(struct lctx *x)
     s2_take_valid = 1; s2_replay_which = 0;
     log_add(LOGK_TAKE, notes, 0, lsong.tempo, x->slow_percent < 100u, lesson_running(), s2_quant);
     learn_notice(notes ? "TAKE DONE. " LBL_REC ": RAW/SNAP" : "NO NOTES IN THAT PASS", 1500);
+    {   /* a lesson's take: enough notes, in the key */
+        const struct lesson_step *ls = lesson_step();
+        if (ls && ls->type == DR_REFTAKE) {
+            const step_t *c = trk[LT_KEYS].step;
+            unsigned st, in_key = 0, need = ls->data[0] ? ls->data[0] : 4u;
+            for (st = 0; st < song_steps(); st++) if (c[st].time == ST_NOTE && c[st].n && theory_in_scale(x->root, x->scale, c[st].note[0])) in_key++;
+            lesson_step_done(notes >= need, notes ? in_key * 100u / notes : 0u);
+        }
+    }
     send_log(); x->redraw = 1;
 }
 static void melody_requantise(void)
@@ -277,7 +286,7 @@ static void trainer_stop(struct lctx *x)
     if (tr.state == TS_IDLE) return;
     tr.state = TS_IDLE; tr.hot = 0;
     p[0] = 2; p[1] = 0; lsyx_send(LCMD_PATH, p, 2);
-    s2_set_big(LEARN_PADS ? "PULSE" : "ROOT", 0, 0);
+    s2_big_until = 0;                             /* (the big line shows the state again) */
     x->redraw = 1;
 }
 static void trainer_finish(struct lctx *x)
@@ -293,9 +302,9 @@ static void trainer_finish(struct lctx *x)
     else if ((after & ~before) & 2u) { { char b[32]; unsigned q = ls_cat(b, 0, sizeof b, "FILL UNLOCKED! TRY "); ls_cat(b, q, sizeof b, LKN[3]); learn_notice(b, 2000); } k = 3; lsyx_send(LCMD_UNLOCK, &k, 1); }
     else learn_notice(pct >= 80u ? (x->slow_percent < 100u ? "PASSED (SLOW: NO UNLOCK)" : "PASSED!") : "KEEP GOING", 1500);
     send_log();
-    s2_set_big(pct >= 80u ? "PASS" : "MISS", pct, 1);
+    s2_set_big(pct >= (tr.lesson ? lesson_need() : 80u) ? "PASS" : "NOT YET", pct, 1);
     tr.state = TS_RESULT; tr.due = x->now + 1500u; tr.hot = 0;
-    if (tr.lesson) { rhythm_lesson_done(pct >= 80u, pct); tr.round = 1; }
+    if (tr.lesson) { rhythm_lesson_done(1, pct); tr.round = 1; }
     x->redraw = 1;
 }
 static void trainer_tap(struct lctx *x)
@@ -390,7 +399,7 @@ static void s2_encoder_edit(struct lctx *x, unsigned id, int delta)
     } break;
     case 1: s2_track = (uint8_t)((s2_track + 4u + (delta > 0 ? 1u : 3u)) % 4u); s2_set_big(S2_TRACK_NM[s2_track], 0, 0); break;
     case 2: { int v = (int)x->slow_percent + delta * 5; uint8_t p; x->slow_percent = (unsigned)(v < 50 ? 50 : v > 100 ? 100 : v); p = (uint8_t)x->slow_percent; lsyx_send(LCMD_SLOW, &p, 1); s2_set_big("SLOW", x->slow_percent, 1); } break;
-    case 3: { int v = (int)s2_lesson_pick + delta; s2_lesson_pick = (uint8_t)(v < 0 ? 0 : v >= (int)lesson_count ? (int)lesson_count - 1 : v); learn_notice(lessons[s2_lesson_pick].title, 1200); } break;
+    case 3: lesson_pick_turn(2, delta); break;
     case 4: { unsigned i = 0; while (i < 4u && PERC_LANES[i] != lsong.perc_lane) i++; i = (i + 5u + (delta > 0 ? 1u : 4u)) % 5u; lsong.perc_lane = PERC_LANES[i]; song_write_drums(); s2_set_big(LANE_NAME[lsong.perc_lane], 0, 0); } break;
     case 5: song_set_bars(delta > 0 ? (lsong.bars == 1u ? 2u : 4u) : (lsong.bars == 4u ? 2u : 1u)); song_write_all(); song_track_setup(LT_KEYS); s2_take_valid = 0; s2_set_big("BARS", lsong.bars, 1); break;
     case 6: { int v = (int)lsong.bass_octave + delta; lsong.bass_octave = (unsigned)(v < 0 ? 0 : v > 2 ? 2 : v); song_write_bass(); s2_set_big("BASS OCT", lsong.bass_octave + 1u, 1); } break;
@@ -407,7 +416,7 @@ static void stage2_init(void)
     memset(s2_pad_down, 0, sizeof s2_pad_down); memset(&tr, 0, sizeof tr); memset(s2_patch, 0, sizeof s2_patch);
     s2_hint[0] = 0; s2_graduated = 0; s2_session_start = 0; s2_needs_write = 1; s2_hold_degree = 0; s2_head = 0;
     s2_pad_mode = LEARN_PADS ? PM_GRID : PM_CHORDS;
-    s2_set_big(LEARN_PADS ? "PULSE" : "ROOT", 0, 0);
+    s2_big_until = 0;                             /* (the big line shows the state again) */
 }
 
 static void key_step_toggle(struct lctx *x, unsigned step)
@@ -540,7 +549,7 @@ static void stage2_control(struct lctx *x)
     }
     if (b & LB(LB_ARP)) {
         if (lesson_running()) { lesson_stop(); trainer_stop(x); learn_notice("LESSON STOPPED", 800); }
-        else { lesson_start(s2_lesson_pick); ls = lesson_step(); if (ls && ls->type == DR_RHYTHM) trainer_start(x, ls); else if (ls && ls->type == DR_GROOVE) groove_check(); }
+        else { lesson_start(lesson_pick(2)); ls = lesson_step(); if (ls && ls->type == DR_RHYTHM) trainer_start(x, ls); else if (ls && ls->type == DR_GROOVE) groove_check(); }
     }
     if (b & LB(LB_HOME)) {
         trainer_stop(x); if (s2_mel_rec) melody_arm(x, 0); if (s2_chord_arm) chord_arm_set(x, 0);
@@ -552,7 +561,7 @@ static void stage2_control(struct lctx *x)
         lesson_step_done(1, 100); ls = lesson_step();
         if (ls && ls->type == DR_RHYTHM) trainer_start(x, ls);
         else if (ls && ls->type == DR_GROOVE) groove_check();
-        else if (ls && ls->type != DR_TEXT) learn_notice("THIS STEP IS ON PAGE 1", 1200);
+        else if (ls && ls->type == DR_REFTAKE) learn_notice(LBL_REC "+" LBL_PLAY ": RECORD A PASS", 1500);
     }
     if (s2_mel_rec) {                             /* the pass ends when the head comes round to where it started */
         unsigned s = song_step();
@@ -624,25 +633,64 @@ static void draw_chord_cell(unsigned beat, unsigned hot)
     ld_text(cx + 2, cy - 1, d ? theory_roman(lsong.minor, d, lsong.chord[idx].seventh) : "-", 0, hot ? LC_BG : LC_CYAN);
 }
 
+static unsigned s2_add(char *line, unsigned n, unsigned cap, const char *t)   /* append if the header has room */
+{
+    unsigned L = 0;
+    while (t[L]) L++;
+    return n + L <= 22u ? ls_cat(line, n, cap, t) : n;   /* (to x = 188, where the page tag starts) */
+}
 static void stage2_draw(struct lctx *x)
 {
     unsigned playing = song_playing(), head = s2_head, bar = head / 16u, col = head % 16u, hot_col = playing ? col : 255u, l, c;
-    char line[40], nn[4];
-    unsigned n;
+    char line[40], nn[4], t[12];
+    unsigned n, k;
     uint32_t bass, mel;
     const struct lesson_step *ls = lesson_step();
-    /* the header: page, tempo, bars, key, swing / fill, slow */
-    n = ls_cat(line, 0, sizeof line, LEARN_PADS ? "PULSE " : "ROOT ");
-    n = ls_num(line, n, sizeof line, lsong.tempo); n = ls_cat(line, n, sizeof line, "BPM ");
-    n = ls_num(line, n, sizeof line, lsong.bars); n = ls_cat(line, n, sizeof line, "BAR ");
-    n = ls_cat(line, n, sizeof line, theory_note_name(x->root, nn)); n = ls_cat(line, n, sizeof line, x->minor ? "m" : "");
-    if (lsong.swing > 50u) { n = ls_cat(line, n, sizeof line, " SW"); n = ls_num(line, n, sizeof line, lsong.swing); }
-    if (lsong.fill_every) { n = ls_cat(line, n, sizeof line, " F"); n = ls_num(line, n, sizeof line, lsong.fill_every); }
-    if (x->slow_percent < 100u) { n = ls_cat(line, n, sizeof line, " S"); ls_num(line, n, sizeof line, x->slow_percent); }
+    /* the header: tempo, bars, key, then swing / fill / slow as they fit */
+    n = ls_num(line, 0, sizeof line, lsong.tempo); n = ls_cat(line, n, sizeof line, "BPM ");
+    n = ls_num(line, n, sizeof line, lsong.bars); n = ls_cat(line, n, sizeof line, lsong.bars == 1u ? " BAR " : " BARS ");
+    n = ls_cat(line, n, sizeof line, theory_note_name(x->root, nn)); n = ls_cat(line, n, sizeof line, x->minor ? " MIN" : " MAJ");
+    if (lsong.swing > 50u) { k = ls_cat(t, 0, sizeof t, " SW"); ls_num(t, k, sizeof t, lsong.swing); n = s2_add(line, n, sizeof line, t); }
+    if (lsong.fill_every) { k = ls_cat(t, 0, sizeof t, " FILL"); ls_num(t, k, sizeof t, lsong.fill_every); n = s2_add(line, n, sizeof line, t); }
+    if (x->slow_percent < 100u) { k = ls_cat(t, 0, sizeof t, " S"); k = ls_num(t, k, sizeof t, x->slow_percent); ls_cat(t, k, sizeof t, "%"); n = s2_add(line, n, sizeof line, t); }
     ld_text(4, 2, line, 0, LC_GREY);
     ld_fill(228, 6, 8, 8, lsyx_partner_present() ? LC_GREEN : LC_PANEL);
-    ld_text(4, 20, s2_big, 1, tr.state == TS_SCORING ? LC_GREEN : LC_TEXT);
-    /* the lanes */
+    /* the big line: the trainer's count-in and verdicts, a knob's value for 2 s, else the state */
+    if (tr.state == TS_COUNT_IN) {
+        unsigned beat = tr.next_click < 0 ? (unsigned)((-tr.next_click + 3) / 4) : 1u;
+        line[0] = (char)('0' + (beat > 4u ? 4u : beat)); line[1] = 0;
+        ld_text(4, 20, line, 1, LC_AMBER);
+        ld_text(40, 28, "COUNT-IN: LISTEN", 0, LC_AMBER);
+    } else if (tr.state != TS_IDLE || (int32_t)(fm1_ms - s2_big_until) < 0) {
+        ld_text(4, 20, s2_big, 1, s2_big[0] == 'M' && s2_big[1] == 'I' ? LC_RED : tr.state == TS_SCORING ? LC_GREEN : LC_TEXT);
+    } else if (playing) {
+        unsigned sv; int d = song_degree_at_step(head, &sv);
+        n = ls_cat(line, 0, sizeof line, "BAR "); n = ls_num(line, n, sizeof line, bar + 1u);
+        if (d > 0) { n = ls_cat(line, n, sizeof line, " "); ls_cat(line, n, sizeof line, theory_roman(lsong.minor, (unsigned)d, sv)); }
+        ld_text(4, 20, line, 1, LC_TEXT);
+    } else {
+        ld_text(4, 20, "PRESS " LBL_PLAY, 1, LC_DIM);
+    }
+    if (tr.state == TS_SCORING && tr.hot) ld_fill(200, 24, 28, 24, LC_GREEN);   /* the beat to tap: a flash */
+    /* the lanes; SMK chord mode: the pad palette there instead; FM-1 with GLO held: the keys as steps */
+#if LEARN_PADS
+    if (s2_pad_mode == PM_CHORDS) {
+        s1_palette(56, lsong.minor, s2_pad_down, 0);
+        ld_text(4, 92, "PADS: CHORDS. 8, 16: REST", 0, LC_DIM);
+    } else
+#else
+    if (x->buttons & LB(LB_GLO)) {
+        uint8_t st[LEARN_KEYS];
+        memset(st, 0, sizeof st);
+        for (k = 0; k < 16u && k < LEARN_KEYS; k++) st[k] = (uint8_t)((lsong.lane[s2_lane].mask >> k) & 1u);
+        if (16u + lsong.bass_rule < LEARN_KEYS) st[16u + lsong.bass_rule] = 2;
+        ld_keymap(54, 20, LEARN_KEYS, (unsigned)(53 + 12 * x->octave), st);
+        n = ls_cat(line, 0, sizeof line, "KEYS 1-16: "); n = ls_cat(line, n, sizeof line, LANE_NM[s2_lane]); ls_cat(line, n, sizeof line, " STEPS");
+        ld_text(4, 75, line, 0, LANE_COL[s2_lane]);
+        n = ls_cat(line, 0, sizeof line, "KEYS 17-19: BASS "); ls_cat(line, n, sizeof line, RULE_NM[lsong.bass_rule % BASS_RULES]);
+        ld_text(4, 91, line, 0, LC_BLUE);
+    } else
+#endif
     for (l = 0; l < LANE_COUNT; l++) {
         uint16_t m = lsong.lane[l].mask;
         ld_text(4, row_y(l) - 3, LANE_NM[l], 0, l == s2_lane ? LANE_COL[l] : LC_DIM);
@@ -656,41 +704,40 @@ static void stage2_draw(struct lctx *x)
     for (c = 0; c < 4u; c++) draw_chord_cell(c, playing && col / 4u == c);
     ld_text(4, row_y(ROW_MEL) - 3, "MEL", 0, LC_GREEN);
     for (c = 0; c < 16u; c++) draw_cell(ROW_MEL, c, (mel >> c) & 1u, c == hot_col, LC_GREEN);
-    /* the status line: mode, bass rule, recorders */
-    n = ls_cat(line, 0, sizeof line, !LEARN_PADS ? (s2_pad_mode == PM_CHORDS ? "KEYS:CHD " : "KEYS:MEL ") : (s2_pad_mode == PM_CHORDS ? "PADS:CHD " : "PADS:GRID "));
-    n = ls_cat(line, n, sizeof line, RULE_NM[lsong.bass_rule % BASS_RULES]);
-    if (s2_chord_arm) n = ls_cat(line, n, sizeof line, " CHD-REC");
-    if (s2_mel_rec) n = ls_cat(line, n, sizeof line, " MEL-REC");
-    else if (s2_take_valid) n = ls_cat(line, n, sizeof line, s2_replay_which ? " RAW" : " SNAP");
-    ld_text(4, 156, line, 0, s2_chord_arm || s2_mel_rec ? LC_RED : LC_DIM);
+    /* the status line: what the keys / pads do, the bass rule, the recorders */
+    n = ls_cat(line, 0, sizeof line, !LEARN_PADS ? (s2_pad_mode == PM_CHORDS ? "KEYS: CHORDS  " : "KEYS: MELODY  ") : (s2_pad_mode == PM_CHORDS ? "PADS: CHORDS  " : "PADS: STEPS  "));
+    if (s2_chord_arm) n = ls_cat(line, n, sizeof line, " CHORD REC ON");
+    else { n = ls_cat(line, n, sizeof line, "BASS: "); n = ls_cat(line, n, sizeof line, RULE_NM[lsong.bass_rule % BASS_RULES]); }
+    ld_text(4, 156, line, 0, s2_chord_arm ? LC_RED : LC_DIM);
     ld_fill(4, 173, 232, 1, playing ? LC_GREEN : LC_PANEL);
-    /* the prompt: the trainer, the lesson step or the idle help */
+    /* the prompt: a recorder, the trainer, the lesson step or the idle help */
     line[0] = 0;
-    if (tr.state == TS_COUNT_IN) ls_cat(line, 0, sizeof line, "COUNT-IN... GET READY");
-    else if (tr.state == TS_SCORING) ls_cat(line, 0, sizeof line, tr.round ? "TAP THE PATTERN" : "TAP ON THE BEAT");
+    if (s2_mel_rec) { ld_bar_text(175, "RECORDING ONE PASS: PLAY!", LC_RED, LC_TEXT); line[0] = 1; }
+    else if (tr.state == TS_COUNT_IN) ls_cat(line, 0, sizeof line, "COUNT-IN... GET READY");
+    else if (tr.state == TS_SCORING) ls_cat(line, 0, sizeof line, LEARN_PADS ? (tr.round ? "PAD 1: TAP THE PATTERN" : "PAD 1: TAP ON THE BEAT") : (tr.round ? "ANY KEY: TAP THE PATTERN" : "ANY KEY: TAP ON THE BEAT"));
     else if (tr.state == TS_RESULT) ls_cat(line, 0, sizeof line, "ROUND DONE");
+    else if (ls && ls->type != DR_TEXT && lesson_retrying()) { n = ls_cat(line, 0, sizeof line, LBL_PLAY ": AGAIN, NEED "); n = ls_num(line, n, sizeof line, lesson_need()); ls_cat(line, n, sizeof line, "%"); }
     else if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
+    else if (s2_take_valid) ls_cat(line, 0, sizeof line, s2_replay_which ? LBL_REC ": HEAR IT SNAPPED" : LBL_REC ": HEAR IT RAW");
     else { ls_cat(line, 0, sizeof line, LEARN_PADS ? LBL_PLAY ": LOOP  PADS: STEPS" : LBL_PLAY ": LOOP " LBL_GLO "+KEY: STEP"); }
-    ld_text(4, 176, line, 0, tr.state == TS_SCORING ? LC_GREEN : LC_AMBER);
-    if (tr.state == TS_IDLE && !ls) ld_text(4, 194, LBL_ENV ": RHYTHM TRAINER", 0, LC_DIM);
-    /* the trainer's stats, or what is locked */
+    if (line[0] != 1) ld_text(4, 176, line, 0, tr.state == TS_SCORING ? LC_GREEN : LC_AMBER);
+    /* one more line: the trainer's numbers, the lesson, or the next thing to try (and what is locked) */
     line[0] = 0;
     if (tr.state != TS_IDLE) {
         unsigned total = tr.hits + tr.misses, pct = total ? tr.hits * 100u / total : 0u;
-        n = ls_cat(line, 0, sizeof line, "ACC "); n = ls_num(line, n, sizeof line, pct); n = ls_cat(line, n, sizeof line, "%  HIT ");
+        n = ls_num(line, 0, sizeof line, pct); n = ls_cat(line, n, sizeof line, "%  HIT ");
         n = ls_num(line, n, sizeof line, tr.hits); n = ls_cat(line, n, sizeof line, " MISS "); n = ls_num(line, n, sizeof line, tr.misses);
-        n = ls_cat(line, n, sizeof line, "  "); ls_num(line, n, sizeof line, tr.tempo);
+        n = ls_cat(line, n, sizeof line, "  "); n = ls_num(line, n, sizeof line, tr.tempo); ls_cat(line, n, sizeof line, "BPM");
+        ld_text(4, 194, line, 0, LC_TEXT);
     } else if (lesson_running()) {
         const struct lesson *ln = &lessons[lesson_running() - 1u];
-        n = ls_cat(line, 0, sizeof line, ln->title); n = ls_cat(line, n, sizeof line, "  ");
+        n = ls_cat(line, 0, sizeof line, "L"); n = ls_num(line, n, sizeof line, lesson_running()); n = ls_cat(line, n, sizeof line, " ");
+        n = ls_cat(line, n, sizeof line, ln->title); n = ls_cat(line, n, sizeof line, " ");
         n = ls_num(line, n, sizeof line, lesson_progress() + 1u); n = ls_cat(line, n, sizeof line, "/"); ls_num(line, n, sizeof line, ln->step_count);
-    }
-    if (line[0]) ld_text(4, 194, line, 0, tr.state != TS_IDLE ? LC_TEXT : LC_PURPLE);
-    else if (!log_unlocked(UNLOCK_SWING)) ld_text(4, 205, "SWING+FILL LOCKED: TRAINER", 0, LC_DIM);
-    else if (!log_unlocked(UNLOCK_FILL)) ld_text(4, 205, "FILL LOCKED: TAP THE PATTERN", 0, LC_DIM);
-    {
-        const char *nt = learn_notice_text();
-        if (nt) ld_text(4, 222, nt, 0, LC_TEXT);
-        else if (s2_hint[0]) ld_text(4, 222, s2_hint, 0, LC_YELLOW);
-    }
+        line[29] = 0;
+        ld_text(4, 194, line, 0, LC_PURPLE);
+    } else if (!log_unlocked(UNLOCK_SWING)) ld_text(4, 194, LBL_ENV ": TRAINER, UNLOCKS SWING", 0, LC_DIM);
+    else if (!log_unlocked(UNLOCK_FILL)) ld_text(4, 194, LBL_ENV ": TRAINER, UNLOCKS FILL", 0, LC_DIM);
+    else { n = ls_cat(line, 0, sizeof line, "ARP: "); lesson_name(line + n, sizeof line - n, lesson_pick(2)); line[29] = 0; ld_text(4, 194, line, 0, LC_DIM); }
+    if (s2_hint[0]) ld_text(4, 222, s2_hint, 0, LC_YELLOW);   /* (notices: the header bar, main.c) */
 }

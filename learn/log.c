@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Practice log. RAM only in this version (no Flash writes: see learn.h).
+ * Practice log. RAM only (the lesson progress is kept by main.c: lprog_word).
  * Export with the LOGDUMP SysEx command; the companion page or a DAW can
  * keep it. Unlocks are recomputed from the log on each entry. */
 

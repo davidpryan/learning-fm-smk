@@ -1,0 +1,29 @@
+{
+  "title": "Verse And Chorus",
+  "stage": 4,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "STORE THE LOOP: A VERSE"
+    },
+    {
+      "type": "text",
+      "prompt": "SCALE: TYPE. GLOBE+PAD 10",
+      "prompt_fm1": "SCL: TYPE. GLO+KEY 10"
+    },
+    {
+      "type": "text",
+      "prompt": "CHANGE IT, STORE A CHORUS"
+    },
+    {
+      "type": "song",
+      "order": [
+        "verse",
+        "chorus"
+      ],
+      "target": 60,
+      "prompt": "SEQ REC, PADS, PATCH TO END",
+      "prompt_fm1": "REC, GLO+KEYS, HOME TO END"
+    }
+  ]
+}

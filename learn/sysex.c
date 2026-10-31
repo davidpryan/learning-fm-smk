@@ -7,7 +7,9 @@
 
 static uint32_t lsyx_partner_ms;                  /* the partner box last spoke (ms | 1), 0 never */
 static uint32_t lsyx_ping_ms;
+#if FELUCCA_OTA
 static uint32_t lsyx_fail_until;                  /* a send failed (host not draining): no sends until */
+#endif
 static uint8_t lsyx_in[LSYX_MAX + 4];             /* one incoming command, parsed, for the stages */
 static uint8_t lsyx_in_cmd, lsyx_in_n, lsyx_in_ready;
 

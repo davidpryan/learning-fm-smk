@@ -1,0 +1,22 @@
+{
+  "title": "Back And Forth",
+  "stage": 4,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "A SONG REPEATS ITS PARTS"
+    },
+    {
+      "type": "song",
+      "order": [
+        "verse",
+        "chorus",
+        "verse",
+        "chorus"
+      ],
+      "target": 70,
+      "prompt": "SEQ REC, PADS, PATCH TO END",
+      "prompt_fm1": "REC, GLO+KEYS, HOME TO END"
+    }
+  ]
+}

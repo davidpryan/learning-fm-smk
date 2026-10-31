@@ -1,0 +1,28 @@
+{
+  "title": "Build And Drop",
+  "stage": 4,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "ENERGY: HOW MUCH IS PLAYING"
+    },
+    {
+      "type": "text",
+      "prompt": "CHORD: A TRANSITION. TRY DROP",
+      "prompt_fm1": "ENV: A TRANSITION. TRY DROP"
+    },
+    {
+      "type": "song",
+      "order": [
+        "verse",
+        "pre",
+        "chorus",
+        "break",
+        "chorus"
+      ],
+      "target": 70,
+      "prompt": "SEQ REC, PADS, PATCH TO END",
+      "prompt_fm1": "REC, GLO+KEYS, HOME TO END"
+    }
+  ]
+}

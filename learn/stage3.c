@@ -31,11 +31,11 @@ enum { SRC_CHORDS, SRC_MELODY, SRC_DRUMS, SRC_COUNT };
 enum { RULE_HOLD, RULE_ARP, RULE_THIRD, RULE_SIXTH, RULE_ECHO, RULE_ANSWER, RULE_TOP, RULE_GHOST, RULE_COUNT };
 static const uint8_t RULE_SRC[RULE_COUNT] = {SRC_CHORDS, SRC_CHORDS, SRC_MELODY, SRC_MELODY, SRC_MELODY, SRC_MELODY, SRC_CHORDS, SRC_DRUMS};
 static const char *const RULE_NAME[RULE_COUNT] = {"HOLD", "ARP", "3RD ABOVE", "6TH BELOW", "ECHO", "ANSWER", "TOP NOTE", "GHOST"};
-static const char *const RULE_HINT[RULE_COUNT] = {
-    "HOLD: CHORD TONES, ONE BEAT EACH", "ARP: CHORD TONES IN YOUR PATTERN",
-    "3RD ABOVE: MELODY +2 SCALE STEPS", "6TH BELOW: MELODY -5 SCALE STEPS",
-    "ECHO: 1 BEAT LATE, 8VA, 60% VEL", "ANSWER: LAST 4 NOTES, BACKWARDS",
-    "TOP NOTE: HIGHEST CHORD TONE", "GHOST: QUIET HITS OFF THE HAT"};
+static const char *const RULE_HINT[RULE_COUNT] = {   /* (each fits the line: 29 characters) */
+    "HOLD: CHORD TONES, 1 PER BEAT", "ARP: CHORD TONES, YOUR ORDER",
+    "3RD ABOVE: MELODY +2 STEPS", "6TH BELOW: MELODY -5 STEPS",
+    "ECHO: 1 BEAT LATE, 8VA, SOFT", "ANSWER: LAST 4 NOTES REVERSED",
+    "TOP NOTE: HIGHEST CHORD TONE", "GHOST: SOFT HITS OFF THE HAT"};
 static const char *const SRC_NAME[SRC_COUNT] = {"CHORDS", "MELODY", "DRUMS"};
 static const uint8_t SRC_TRACK[SRC_COUNT] = {LT_CHORDS, LT_KEYS, LT_DRUMS};   /* the track a source plays on */
 static const uint8_t TAPE_TRK[TAPE_TRACKS] = {LT_KEYS, LT_CHORDS, LT_BASS};
@@ -445,8 +445,6 @@ static void stage3_key(struct lctx *x, unsigned note, unsigned velocity)
         return;
     }
     if (velocity) {
-        const struct lesson_step *ls = lesson_step();
-        if (ls && ls->type == DR_TEXT) lesson_step_done(1, 100);
         s3_sounding[note >> 5] |= 1u << (note & 31u);
         lmidi_note(t, note, velocity);
     } else if (s3_sounding[note >> 5] & (1u << (note & 31u))) {
@@ -484,6 +482,7 @@ static void stage3_encoder(struct lctx *x, unsigned id, int delta)
     struct shadow *sh = &s3_sh[s3_sel];
     unsigned st = TAPE_TRK[s3_tape];
     int v;
+    if (id == 6 && (x->buttons & LB(LB_GLO))) { lesson_pick_turn(3, delta); return; }   /* GLO + the slow knob: the lesson */
     if (!LEARN_PADS && id == 1 && !(x->buttons & LB(LB_GLO))) {   /* the FM-1 has no obedience fader: K2 */
         v = (int)sh->obedience + delta * 8; sh->obedience = (uint8_t)(v < 0 ? 0 : v > 127 ? 127 : v);
         if (sh->used) { render_slot(s3_sel); shadow_send(s3_sel); }
@@ -501,7 +500,12 @@ static void stage3_encoder(struct lctx *x, unsigned id, int delta)
         learn_notice("PATCH CHANGED", 600);
     } break;
     case 4: s3_send_pick = (uint8_t)(delta > 0 ? 1 : 0); learn_notice(s3_send_pick ? "SEND: DELAY" : "SEND: REVERB", 700); break;
-    case 5: { int16_t *sp = &trk[st].p[s3_send_pick ? P_DLY : P_REV]; v = *sp + delta * 8; *sp = (int16_t)(v < 0 ? 0 : v > 127 ? 127 : v); } break;
+    case 5: {
+        int16_t *sp = &trk[st].p[s3_send_pick ? P_DLY : P_REV]; char b[24]; unsigned k;
+        v = *sp + delta * 8; *sp = (int16_t)(v < 0 ? 0 : v > 127 ? 127 : v);
+        k = ls_cat(b, 0, sizeof b, TAPE_NM[s3_tape]); k = ls_cat(b, k, sizeof b, s3_send_pick ? " DELAY " : " REVERB ");
+        k = ls_num(b, k, sizeof b, (unsigned)*sp * 100u / 127u); ls_cat(b, k, sizeof b, "%"); learn_notice(b, 900);
+    } break;
     case 6: { uint8_t p; v = (int)x->slow_percent + delta * 5; x->slow_percent = (unsigned)(v < 50 ? 50 : v > 100 ? 100 : v); p = (uint8_t)x->slow_percent; lsyx_send(LCMD_SLOW, &p, 1); } break;
     default: break;
     }
@@ -578,6 +582,10 @@ static void stage3_control(struct lctx *x)
         }
         x->redraw = 1;
     }
+    {   /* a lesson's TEXT step: any key or pad continues (the press also does what it does) */
+        const struct lesson_step *ls = lesson_step();
+        if (ls && ls->type == DR_TEXT && x->keys_down) lesson_step_done(1, 100);
+    }
     if (b & LB(LB_HOME)) stop_all(x);
     if (b & LB(LB_SAVE)) { if (glo) take_redo_s3(x); else { uint8_t tp = 3; take_undo_s3(x); lsyx_send(LCMD_TRANSPORT, &tp, 1); } }
     if (b & LB(LB_SCL)) select_tape(x, (s3_tape + 1u) % TAPE_TRACKS);
@@ -586,7 +594,7 @@ static void stage3_control(struct lctx *x)
     if (b & LB(LB_EDIT)) { s3_sel = (uint8_t)((s3_sel + 1u) % SHADOWS); x->redraw = 1; }
     if (b & LB(LB_ARP)) {
         if (lesson_running()) { lesson_stop(); learn_notice("LESSON STOPPED", 800); }
-        else { unsigned i; for (i = 0; i < lesson_count; i++) if (lessons[i].stage == 3) { lesson_start(i); break; } if (!lesson_running()) learn_notice("NO PAGE 3 LESSON IN THIS PACK", 900); }
+        else { lesson_start(lesson_pick(3)); if (!lesson_running()) learn_notice("NO LESSON ON THIS PAGE", 900); }
         x->redraw = 1;
     }
     if (b & LB(LB_LFO)) { s3_arp_entry = 0; if (s3_sh[s3_sel].used) demo_start(x, s3_sh[s3_sel].rule); }
@@ -681,23 +689,31 @@ static void stage3_draw(struct lctx *x)
     char line[40], big[16], sub[32];
     const struct shadow *sh = &s3_sh[s3_sel];
     const struct lesson_step *ls = lesson_step();
-    n = ls_cat(line, 0, sizeof line, LEARN_PADS ? "SHADOW " : "TAPE ");
-    n = ls_num(line, n, sizeof line, lsong.bars); n = ls_cat(line, n, sizeof line, "BAR ");
-    n = ls_num(line, n, sizeof line, lsong.tempo); n = ls_cat(line, n, sizeof line, " BPM");
-    if (x->slow_percent < 100u) { n = ls_cat(line, n, sizeof line, " S"); ls_num(line, n, sizeof line, x->slow_percent); }
+    n = ls_num(line, 0, sizeof line, lsong.tempo); n = ls_cat(line, n, sizeof line, "BPM ");
+    n = ls_num(line, n, sizeof line, lsong.bars); n = ls_cat(line, n, sizeof line, lsong.bars == 1u ? "BAR" : "BARS");
+    if (x->slow_percent < 100u) { n = ls_cat(line, n, sizeof line, " SLOW "); n = ls_num(line, n, sizeof line, x->slow_percent); ls_cat(line, n, sizeof line, "%"); }
     ld_text(4, 2, line, 0, LC_GREY);
     ld_fill(228, 6, 8, 8, lsyx_partner_present() ? LC_GREEN : LC_PANEL);
     big[0] = 0; sub[0] = 0;
-    if (s3_src_armed) { ls_cat(big, 0, sizeof big, SRC_NAME[s3_src_armed - 1u]); ls_cat(sub, 0, sizeof sub, "PICK A RULE"); }
+    if (s3_src_armed) { ls_cat(big, 0, sizeof big, SRC_NAME[s3_src_armed - 1u]); ls_cat(sub, 0, sizeof sub, LEARN_PADS ? "NOW A RULE: PAD 9-16" : "NOW A RULE: " LBL_GLO "+KEY 9-16"); }
     else if (sh->used) {
         big[0] = (char)('A' + s3_sel); big[1] = ' '; big[2] = 0; ls_cat(big, 2, sizeof big, RULE_NAME[sh->rule]);
         n = ls_cat(sub, 0, sizeof sub, SRC_NAME[s3_sel]); n = ls_cat(sub, n, sizeof sub, " OCT");
         n = ls_cat(sub, n, sizeof sub, sh->octave < 0 ? "-" : "+"); n = ls_num(sub, n, sizeof sub, (unsigned)(sh->octave < 0 ? -sh->octave : sh->octave));
-        n = ls_cat(sub, n, sizeof sub, " D"); n = ls_num(sub, n, sizeof sub, sh->density);
+        n = ls_cat(sub, n, sizeof sub, " DENS "); n = ls_num(sub, n, sizeof sub, sh->density);
         ls_cat(sub, n, sizeof sub, sh->obedience >= 120u ? " STRICT" : sh->obedience >= 60u ? " HUMAN" : " LOOSE");
-    } else { ls_cat(big, 0, sizeof big, "SHADOW"); ls_cat(sub, 0, sizeof sub, LEARN_PADS ? "PAD 1-3 THEN PAD 9-16" : "GLO+KEY: SOURCE, RULE"); }
+    } else { ls_cat(big, 0, sizeof big, "PICK A SOURCE"); ls_cat(sub, 0, sizeof sub, "THEN A RULE: A NEW PART"); }
     ld_text(4, 20, big, 1, LC_TEXT);
     ld_text(4, 54, sub, 0, sh->used && !s3_src_armed ? src_rgb(s3_sel) : LC_CYAN);
+    /* a source armed: the rules, by pad / key number, the ones that fit it bright */
+    if (s3_src_armed) {
+        for (i = 0; i < RULE_COUNT; i++) {
+            unsigned ok = RULE_SRC[i] == s3_src_armed - 1u;
+            int cx = i < 4u ? 4 : 124, cy = 74 + (int)(i % 4u) * 20;
+            n = ls_num(line, 0, sizeof line, 9u + i); n = ls_cat(line, n, sizeof line, i < 1u ? "  " : " "); ls_cat(line, n, sizeof line, RULE_NAME[i]);
+            ld_text(cx, cy, line, 0, ok ? src_rgb(RULE_SRC[i]) : LC_DIM);
+        }
+    } else
     /* the tape lanes: MEL, CHD, BASS, DRUMS: a note-density bar, the head, the punch, the take, the level */
     for (i = 0; i < 4u; i++) {
         unsigned t = i < 3u ? TAPE_TRK[i] : LT_DRUMS, active = 0, s, punch = (s3_punch_on && i == 0u) ? s3_punch_bars : 0u;
@@ -707,12 +723,11 @@ static void stage3_draw(struct lctx *x)
         if (i == 3u) { for (s = 0; s < steps; s++) if (dstep_mask(&TDRUM->dstep[s])) active++; }
         else for (s = 0; s < steps; s++) if (trk[t].step[s].time == ST_NOTE && trk[t].step[s].n) active++;
         ld_text(4, y - 2, i < 3u ? TAPE_NM[i] : "DRM", 0, (i < 3u && s3_tape == i) ? LC_TEXT : c);
-        if (i < 3u && s3_tape == i) ld_fill(0, y, 2, 12, rec ? LC_RED : LC_TEXT);
+        if (i < 3u && s3_tape == i && rec) ld_fill(0, y, 2, 12, LC_RED);
         ld_frame(46, y, 120, 12, LC_PANEL);
         if (active) ld_fill(47, y + 1, (int)(active * 118u / steps) + 1, 10, shadowed ? c : LC_DIM);
         for (s = 0; s < steps / 16u; s++) if ((punch >> s) & 1u) ld_fill(47 + (int)s * 118 / (int)(steps / 16u), y + 13, 118 / (int)(steps / 16u), 2, LC_RED);
         if (head != 0xffu) ld_fill(47 + (int)(head * 118u / steps), y + 1, 2, 10, rec ? LC_RED : LC_ORANGE);
-        if (i == 0u) { n = ls_cat(line, 0, sizeof line, "T"); if (s3_take_cur != 255u) ls_num(line, n, sizeof line, s3_take_cur + 1u); else ls_cat(line, n, sizeof line, "-"); ld_text(172, y - 2, line, 0, s3_take_cur != 255u ? LC_AMBER : LC_DIM); }
         lvl = (unsigned)(trk[t].peak < 0 ? 0 : trk[t].peak) >> 10; if (lvl > 36u) lvl = 36u;
         ld_frame(196, y, 40, 12, LC_PANEL);
         if (lvl) ld_fill(198, y + 2, (int)lvl, 8, (s3_solo >> t) & 1u ? LC_YELLOW : LC_GREEN);
@@ -725,20 +740,23 @@ static void stage3_draw(struct lctx *x)
     else if (ls) ls_cat(line, 0, sizeof line, ls->prompt ? ls->prompt : "");
     else ls_cat(line, 0, sizeof line, LEARN_PADS ? "PADS 1-3 SOURCE, 9-16 RULE" : LBL_GLO "+KEY 1-3 SRC, 9-16 RULE");
     ld_text(4, 166, line, 0, s3_recording() ? LC_RED : LC_AMBER);
-    if (!s3_recording() && !s3_punch_armed && !s3_arp_entry && !s3_demo_phase && !ls && !lesson_running())
-        ld_text(4, 184, LBL_REC "+" LBL_PLAY ": TAPE A PASS", 0, LC_DIM);
     if (lesson_running()) {
         const struct lesson *l = &lessons[lesson_running() - 1u];
-        n = ls_cat(line, 0, sizeof line, l->title); n = ls_cat(line, n, sizeof line, "  ");
+        n = ls_cat(line, 0, sizeof line, "L"); n = ls_num(line, n, sizeof line, lesson_running()); n = ls_cat(line, n, sizeof line, " ");
+        n = ls_cat(line, n, sizeof line, l->title); n = ls_cat(line, n, sizeof line, " ");
         n = ls_num(line, n, sizeof line, lesson_progress() + 1u); n = ls_cat(line, n, sizeof line, "/"); ls_num(line, n, sizeof line, l->step_count);
+        line[29] = 0;
         ld_text(4, 184, line, 0, LC_PURPLE);
+    } else {
+        n = ls_cat(line, 0, sizeof line, "ARP: "); lesson_name(line + n, sizeof line - n, lesson_pick(3)); line[29] = 0;
+        ld_text(4, 184, line, 0, LC_DIM);
     }
-    for (i = 0; i < s3_take_count; i++) ld_fill(4 + (int)i * 14, 206, 10, 6, i == s3_take_cur ? LC_GREEN : LC_DIM);
-    n = ls_cat(line, 0, sizeof line, s3_send_pick ? "DLY " : "REV "); ls_num(line, n, sizeof line, (unsigned)trk[TAPE_TRK[s3_tape]].p[s3_send_pick ? P_DLY : P_REV]);
-    ld_text(170, 200, line, 0, LC_DIM);
-    {
-        const char *nt = learn_notice_text();
-        if (nt) ld_text(4, 222, nt, 0, LC_TEXT);
-        else if (s3_hint[0]) ld_text(4, 222, s3_hint, 0, LC_YELLOW);
-    }
+    /* the takes (or how to make one) */
+    if (s3_take_count) {
+        n = ls_cat(line, 0, sizeof line, "TAKE "); n = ls_num(line, n, sizeof line, s3_take_cur != 255u ? s3_take_cur + 1u : 0u);
+        n = ls_cat(line, n, sizeof line, " OF "); n = ls_num(line, n, sizeof line, s3_take_count);
+        ls_cat(line, n, sizeof line, "  " LBL_REC ": A/B");
+        ld_text(4, 202, line, 0, LC_AMBER);
+    } else ld_text(4, 202, LBL_REC "+" LBL_PLAY ": TAPE A PASS", 0, LC_DIM);
+    if (s3_hint[0]) ld_text(4, 222, s3_hint, 0, LC_YELLOW);   /* (notices: the header bar, main.c) */
 }

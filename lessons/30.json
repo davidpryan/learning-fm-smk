@@ -1,0 +1,26 @@
+{
+  "title": "A Better Take",
+  "stage": 3,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "TAKES ARE KEPT. TAPE AGAIN"
+    },
+    {
+      "type": "reftake",
+      "notes": 8,
+      "target": 90,
+      "prompt": "8+ NOTES, ALL IN THE KEY"
+    },
+    {
+      "type": "text",
+      "prompt": "SEQ REC TAP: A/B THE TAKES",
+      "prompt_fm1": "REC TAP: A/B THE TAKES"
+    },
+    {
+      "type": "text",
+      "prompt": "BT: UNDO A TAKE",
+      "prompt_fm1": "SAVE: UNDO A TAKE"
+    }
+  ]
+}

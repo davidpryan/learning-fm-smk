@@ -87,8 +87,17 @@ bright. During the trainer only pad 1 is lit, bright while a tap is due.
   per byte), `tempo`, `count` = bars; the step runs as one pattern round
   (PLAY or ARP starts it). Type `groove` (6): `data[2*lane]` = hits,
   `data[2*lane+1]` = shift per lane; the step passes when every listed lane's
-  mask matches E(hits, 16, shift). Steps of Stage 1 types prompt the player
-  back to page 1.
+  mask matches E(hits, 16, shift) (JSON `lanes`). Type `reftake` (7) here
+  is a melody take: enough notes (`notes`), the target share in the key.
+  Six lessons (21-26): a steady beat, offbeats, spreading the kick, snare and
+  hat, a chord loop, one melody pass. A step passes at its target; the
+  trainer otherwise waits for PLAY.
+* **On the screen.** The big line shows a knob's value for two seconds, then
+  the bar and the chord under the play head (stopped: PRESS PLAY); the
+  trainer's count-in is a big 4 3 2 1 and a green square flashes when a tap
+  is due. SMK in chord mode: the pad palette replaces the drum lanes. FM-1
+  with GLO held: the keys drawn as the lane's steps (keys 1-16) and the bass
+  rules (17-19).
 * **Graduation.** Logged as `LOGK_SONG` when, within five minutes of entering
   the page, there is a melody take at full tempo, chords in the loop, a kick
   lane and a passed rhythm round.

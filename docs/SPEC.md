@@ -181,5 +181,6 @@ lesson, match >= 80 % and no late changes.
   `learn.h`. A firmware ignores commands it does not know.
 * Teaching layer in every stage: practice log, slow mode, mistake replay,
   why-hints on a 2 s hold, follow-me, lessons.
-* No Flash writes in this version; sections, takes and the log are RAM and
-  can be dumped over SysEx.
+* No Flash code in the layer; sections, takes and the log are RAM and can be
+  dumped over SysEx. The SMK-37 keeps the lesson progress in SLOOP's settings
+  object (see SAFETY.md).

@@ -1,0 +1,33 @@
+{
+  "title": "Snare And Hat",
+  "stage": 2,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "SCALE PICKS THE LANE TO EDIT",
+      "prompt_fm1": "SCL PICKS THE LANE TO EDIT"
+    },
+    {
+      "type": "groove",
+      "lanes": {
+        "snare": [
+          3,
+          2
+        ]
+      },
+      "prompt": "SNARE: K2 3 HITS, K3 SHIFT 2",
+      "prompt_fm1": "SNARE: K1 3 HITS, K2 SHIFT 2"
+    },
+    {
+      "type": "groove",
+      "lanes": {
+        "hat": [
+          6,
+          0
+        ]
+      },
+      "prompt": "HAT: K2 6 HITS",
+      "prompt_fm1": "HAT: K1 6 HITS"
+    }
+  ]
+}

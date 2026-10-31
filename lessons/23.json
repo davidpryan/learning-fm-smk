@@ -1,0 +1,36 @@
+{
+  "title": "Spread The Kick",
+  "stage": 2,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "HITS SPREAD EVENLY: A GROOVE"
+    },
+    {
+      "type": "groove",
+      "lanes": {
+        "kick": [
+          3,
+          0
+        ]
+      },
+      "prompt": "K2: KICK TO 3 HITS",
+      "prompt_fm1": "K1: KICK TO 3 HITS"
+    },
+    {
+      "type": "groove",
+      "lanes": {
+        "kick": [
+          5,
+          0
+        ]
+      },
+      "prompt": "K2: 5 HITS, BUSIER",
+      "prompt_fm1": "K1: 5 HITS, BUSIER"
+    },
+    {
+      "type": "text",
+      "prompt": "THE BASS FOLLOWS THE KICK"
+    }
+  ]
+}

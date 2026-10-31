@@ -7,14 +7,17 @@ every existing open SMK-37 firmware is built. GPL-3.0-only.
 
 | Page (SEQ cycles them) | SMK-37 Elite | FM-1 | What it teaches |
 | --- | --- | --- | --- |
-| 1 Hear it | Lantern | Ember | notes and chords named as you play, nudge-or-mute, drills, 20 lessons, follow-me lights |
-| 2 Loop it | Pulse | Root | a chord per beat, Euclidean drums, a bass that follows the kick, the melody recorder, the rhythm trainer |
-| 3 Grow it | Shadow | Tape | parts described by a rule on another part (hold, arp, 3rd above, echo, ghost ...), takes, punch, A/B |
-| 4 Finish it | Stage | Scribe | eight sections queued by hand, transitions, energy, the song record |
+| 1 Hear it | Lantern | Ember | notes and chords named as you play, nudge-or-mute, ear drills (a miss shows the answer), 20 lessons |
+| 2 Loop it | Pulse | Root | a chord per beat, Euclidean drums, a bass that follows the kick, the melody recorder, the rhythm trainer, 6 lessons |
+| 3 Grow it | Shadow | Tape | parts described by a rule on another part (hold, arp, 3rd above, echo, ghost ...), takes, punch, A/B, 5 lessons |
+| 4 Finish it | Stage | Scribe | eight sections queued by hand, transitions, energy, the song record, 5 lessons |
 
 Plain SLOOP is still inside: **hold GLO + HOME for two seconds** to switch
 between LEARN and SLOOP, both ways (on the SMK-37: GLOBE + PATCH). GLO + SEQ
-shows the current page's controls on the screen; GLO + ARP shows your results. Each page's graduation (the last lesson,
+shows the current page's help on the screen (four screens: what it is for, the buttons,
+the knobs, what the screen shows); GLO + ARP shows your results. ARP starts the page's
+next lesson; a step passes at its target score, otherwise it waits for another try. On the
+SMK-37 the lesson progress survives power-off. Each page's graduation (the last lesson,
 a whole loop, a take in key) says when the next page is ready; nothing is
 locked, so you can look ahead.
 

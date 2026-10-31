@@ -6,6 +6,7 @@
  *   cc -O1 -w -DFELUCCA_LEARN=1 -DLEARN_STAGE=1 -Isloop/build/gen -Isloop/firmware/src -Isloop/firmware/hal \
  *      -Isloop/tests -o build/host/learn_ui_test learn/tests/learn_ui_test.c -lm */
 #define UI_PAGES_HARNESS_ONLY 1
+#define LEARN_HOST 1
 #include "../pre.h"
 #include "ui_pages_test.c"
 #include "../learn.c"
@@ -146,7 +147,7 @@ int main(int argc, char **argv)
     encs[panel.enc[4]] = -1; frame();
     check(lx.slow_percent == 95, "knob 5: slow 95 %");
     encs[panel.enc[5]] = 1; frame();
-    check(s1_lesson_pick == 1, "knob 6: the next lesson");
+    check(lesson_offset(lesson_pick(1)) == 1, "knob 6: the next lesson");
 
     /* ---- octave ---- */
     tap(B_OCTUP);
@@ -206,6 +207,9 @@ int main(int argc, char **argv)
     tap(B_SEQ);
     check(lov_help == 3, "screen 3");
     shot("learn-help3");
+    tap(B_SEQ);
+    check(lov_help == 4, "screen 4: colours and signs");
+    shot("learn-help4");
     tap(B_SEQ);
     check(lov_help == 0 && learn_page() == 1, "and off again");
     fm1_in.buttons |= BT(B_GLO); frame(); tap(B_SEQ); fm1_in.buttons &= ~BT(B_GLO); frame();

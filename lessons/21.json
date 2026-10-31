@@ -1,0 +1,35 @@
+{
+  "title": "Steady Beat",
+  "stage": 2,
+  "unlocks": [
+    "swing"
+  ],
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "A LOOP HAS A PULSE: 4 BEATS"
+    },
+    {
+      "type": "text",
+      "prompt": "4 CLICKS COUNT IN, THEN TAP"
+    },
+    {
+      "type": "rhythm",
+      "count": 2,
+      "tempo": 80,
+      "pattern": "x...x...x...x...",
+      "target": 70,
+      "prompt": "PAD 1: TAP WITH THE CLICK",
+      "prompt_fm1": "ANY KEY: TAP WITH THE CLICK"
+    },
+    {
+      "type": "rhythm",
+      "count": 2,
+      "tempo": 100,
+      "pattern": "x...x...x...x...",
+      "target": 80,
+      "prompt": "FASTER: PAD 1 ON THE BEAT",
+      "prompt_fm1": "FASTER: TAP ON THE BEAT"
+    }
+  ]
+}

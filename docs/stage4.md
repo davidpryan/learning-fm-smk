@@ -5,8 +5,9 @@
 
 Page 4 (press SEQ until the header reads STAGE or SCRIBE). The loop you built
 on pages 2 and 3 becomes a *section*; eight sections, queued with the hands,
-make a song. Everything lives in RAM: sections, the song record and the
-practice log are gone at power-off (dump the log over SysEx first).
+make a song. Sections, the song record and the practice log live in RAM and are gone at
+power-off (dump the log over SysEx first); only the lesson progress is kept
+(SMK-37).
 
 ## Sections
 
@@ -111,7 +112,9 @@ coloured blocks with the play head in the current block.
 ## Lessons and follow-me
 
 A lesson step of type `song` carries a target order in `data[]` (section
-types 1..8 = Intro..Free) and a tempo. ARP starts the picked lesson (K3).
+types 1..8 = Intro..Free; JSON `order`) and a tempo. Five lessons (32-36:
+verse and chorus, back and forth, intro and outro, build and drop, a whole
+song). ARP starts the picked lesson (K3).
 Store one slot of each type the lesson asks for; the slot of the next ghost
 section lights two bars before it is due and blinks through the last bar.
 Queue it while it is lit for a green mark, later for yellow. When as many
@@ -134,7 +137,7 @@ sections in red, late ones in yellow.
 | SECTION (23) | slot (127 = none), type, state (0 stored, 1 playing), bars left | store, recall, every bar |
 | SONGPOS (24) | bar, beat, seconds low 7, seconds high 7 | every beat |
 | PATH (4) | 0 pad / 2 clear, index | follow-me target changes |
-| LESSON (25) | index | K3 |
+| LESSON (25) | index + 1 | a lesson starts (the partner starts it too, if none is running) |
 | LOG (8) | streak, stage, attempts | a song step is scored |
 | REC (12), REPLAY (6), SLOW (7) | as in earlier stages | |
 

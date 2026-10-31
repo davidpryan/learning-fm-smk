@@ -27,9 +27,12 @@ Two single-producer rings cross the audio ISR boundary (`learn/midi.c`):
 ISR → main carries key / pad / MIDI events; main → ISR carries sound
 requests (track, note, velocity) that the ISR turns into SLOOP's
 `input_on` / `input_off` and MIDI out. Nothing of the layer's logic runs in
-the ISR; nothing blocks; no allocation. The layer never writes Flash: the
+the ISR; nothing blocks; no allocation. The layer has no Flash code: the
 practice log, takes, sections and lessons are RAM / compiled in. SLOOP's own
-autosave of the project is unchanged.
+autosave of the project is unchanged. On the SMK-37 the lesson progress (16
+bits: `lprog_word`, learn/main.c) is carried in the two spare bytes of SLOOP's
+settings object (`smkset_t rsv[2]`) by SLOOP's own quiet-time settings save;
+the layer only sets `settings_later` when the value changes (see SAFETY.md).
 
 Sequencer data (steps, drum lanes, lengths, tempo, swing, mutes, levels) is
 written from the main loop into SLOOP's track structures, the way SLOOP's

@@ -42,7 +42,7 @@ static int theory_degree(unsigned root, unsigned scale, unsigned note)
     return ((mask >> pc) & 1U) ? (int)degree : 0;
 }
 
-/* Triad qualities per degree. Major: I ii iii IV V vi viio. Natural minor: i iio III iv v VI VII. */
+/* Triad qualities per degree. Major: I ii iii IV V vi vii(dim). Natural minor: i ii(dim) III iv v VI VII. */
 static const uint8_t major_quality[7] = {CHORD_MAJ, CHORD_MIN, CHORD_MIN, CHORD_MAJ, CHORD_MAJ, CHORD_MIN, CHORD_DIM};
 static const uint8_t minor_quality[7] = {CHORD_MIN, CHORD_DIM, CHORD_MAJ, CHORD_MIN, CHORD_MIN, CHORD_MAJ, CHORD_MAJ};
 static const uint8_t major_offsets[7] = {0, 2, 4, 5, 7, 9, 11};
@@ -67,10 +67,10 @@ static unsigned theory_degree_chord(unsigned root, unsigned minor, unsigned degr
     return 4;
 }
 
-static const char *const roman_major[7] = {"I","ii","iii","IV","V","vi","viio"};
-static const char *const roman_minor[7] = {"i","iio","III","iv","v","VI","VII"};
-static const char *const roman_major7[7] = {"Imaj7","ii7","iii7","IVmaj7","V7","vi7","viio7"};
-static const char *const roman_minor7[7] = {"i7","iio7","IIImaj7","iv7","v7","VImaj7","VII7"};
+static const char *const roman_major[7] = {"I","ii","iii","IV","V","vi","vii\xB0"};
+static const char *const roman_minor[7] = {"i","ii\xB0","III","iv","v","VI","VII"};
+static const char *const roman_major7[7] = {"Imaj7","ii7","iii7","IVmaj7","V7","vi7","vii\xF8" "7"};
+static const char *const roman_minor7[7] = {"i7","ii\xF8" "7","IIImaj7","iv7","v7","VImaj7","VII7"};
 static const char *theory_roman(unsigned minor, unsigned degree, unsigned seventh)
 {
     if (degree < 1 || degree > 7) return "?";
@@ -130,16 +130,16 @@ static const char *theory_interval_name(int semitones)
 static const char *theory_why_hint(unsigned minor, unsigned degree)
 {
     static const char *const major[7] = {
-        "I IS HOME. EVERYTHING RESTS HERE",
+        "I IS HOME: EVERYTHING RESTS",
         "ii LEANS TOWARD V",
         "iii IS SOFT, SHARES NOTES WITH I",
         "IV LIFTS AWAY FROM HOME",
         "V PULLS BACK TO I",
         "vi SHARES TWO NOTES WITH I",
-        "vii IS TENSE, WANTS I NEXT"};
+        "vii\xB0 IS TENSE, WANTS I NEXT"};
     static const char *const mnr[7] = {
         "i IS HOME, THE SAD ONE",
-        "ii DIM WANTS V OR i",
+        "ii\xB0 WANTS V OR i",
         "III IS THE BRIGHT RELATIVE",
         "iv LEANS DOWN TO i",
         "v IS GENTLE, V7 IS STRONGER",

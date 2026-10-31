@@ -1,0 +1,22 @@
+{
+  "title": "One Melody Pass",
+  "stage": 2,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "FX: PADS TO STEPS, KEYS PLAY",
+      "prompt_fm1": "FX: KEYS PLAY THE MELODY"
+    },
+    {
+      "type": "text",
+      "prompt": "SEQ REC+SEQ PLAY: ONE PASS",
+      "prompt_fm1": "REC+PLAY: RECORD ONE PASS"
+    },
+    {
+      "type": "reftake",
+      "notes": 6,
+      "target": 80,
+      "prompt": "6+ NOTES, ALL IN THE KEY"
+    }
+  ]
+}

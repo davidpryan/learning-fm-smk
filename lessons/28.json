@@ -1,0 +1,25 @@
+{
+  "title": "Chord Shadows",
+  "stage": 3,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "PAD 1 (CHORDS), THEN PAD 10",
+      "prompt_fm1": "GLO+KEY 1, THEN GLO+KEY 10"
+    },
+    {
+      "type": "text",
+      "prompt": "ARP: CHORD TONES IN TURN"
+    },
+    {
+      "type": "text",
+      "prompt": "K3: DENSITY. K2: OCTAVE",
+      "prompt_fm1": "GLO+K2: DENSITY. K1: OCTAVE"
+    },
+    {
+      "type": "text",
+      "prompt": "PAD 15: ONLY THE TOP NOTE",
+      "prompt_fm1": "GLO+KEY 15: THE TOP NOTE"
+    }
+  ]
+}

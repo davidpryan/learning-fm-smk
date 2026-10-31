@@ -4,6 +4,7 @@
  * From the repo root: tools/ui_review.sh (builds it for both boards, writes docs/ui-review/*.png, FM-1 left,
  * SMK-37 right). LEARN_UI_SMK=1 renders the SMK-37's screens, names and pads on the FM-1 harness. */
 #define UI_PAGES_HARNESS_ONLY 1
+#define LEARN_HOST 1
 #include "../pre.h"
 #include "ui_pages_test.c"
 #include "../learn.c"
@@ -96,8 +97,16 @@ int main(int argc, char **argv)
     }
     shot_dev("p1-11-lesson-done");
     frames(150); shot_dev("p1-12-result-card");
+    knob(5, -1); tap(B_ARP); frames(2); key(7); key(7);   /* lesson 1 again, every answer wrong: the step waits */
+    for (i = 0; i < 8000 && (s1d.state != DS_IDLE || !lesson_retrying()) && lesson_running(); i++) {
+        if (s1d.state == DS_WAIT_ANSWER && !s1d.answer_count) { int k = (int)s1d.target[0] - 53 + 2; key(k >= 0 && k < 27 ? (uint32_t)k : 0u); }
+        else frame();
+        if (s1d.state == DS_RESULT && s1_reveal && i < 400) { shot_dev("p1-12a-miss-reveal"); i = 400; }
+    }
+    frames(10); shot_dev("p1-12b-lesson-retry");
+    tap(B_ARP); frames(150);
     glo(B_ARP); shot_dev("p1-13-log"); tap(B_ENV);
-    glo(B_SEQ); shot_dev("p1-14-help1"); tap(B_SEQ); shot_dev("p1-15-help2"); tap(B_SEQ); shot_dev("p1-16-help3"); tap(B_SEQ);
+    glo(B_SEQ); shot_dev("p1-14-help1"); tap(B_SEQ); shot_dev("p1-15-help2"); tap(B_SEQ); shot_dev("p1-16-help3"); tap(B_SEQ); shot_dev("p1-16b-help4"); tap(B_SEQ);
     glo_key(2); tap(B_SCL); frames(60); shot_dev("p1-17-g-minor");
     tap(B_PLAY); for (i = 0; i < 200 && s1d.state != DS_WAIT_ANSWER; i++) frame();
     key(0); frames(60); shot_dev("p1-18-drill-miss");
@@ -110,7 +119,7 @@ int main(int argc, char **argv)
     tap(B_SEQ); frames(100); shot_dev("p2-01-idle");
     tap(B_PLAY); frames(40); shot_dev("p2-02-playing");
     if (LEARN_PADS) { pad(3, 100); pad(3, 0); frames(2); shot_dev("p2-03-pad-step"); }
-    else { glo_key(3); shot_dev("p2-03-glokey-step"); }
+    else { glo_key(3); fm1_in.buttons |= BT(B_GLO); frames(2); shot_dev("p2-03-glokey-step"); fm1_in.buttons &= ~BT(B_GLO); frame(); }
     tap(B_FX); frames(2);
     if (LEARN_PADS) { pad(4, 100); frames(2); shot_dev("p2-04-chords-pad-V"); pad(4, 0); }
     else { kdown(2); frames(2); shot_dev("p2-04-chordkey-G"); kup(2); }
@@ -140,7 +149,8 @@ int main(int argc, char **argv)
     for (i = 0; i < 600 && s2_mel_rec; i++) frame();
     frames(10); shot_dev("p2-09-take-done");
     tap(B_HOME); frames(150);
-    glo(B_SEQ); shot_dev("p2-10-help1"); tap(B_SEQ); shot_dev("p2-11-help2"); tap(B_SEQ); shot_dev("p2-12-help3"); tap(B_SEQ);
+    glo(B_SEQ); shot_dev("p2-10-help1"); tap(B_SEQ); shot_dev("p2-11-help2"); tap(B_SEQ); shot_dev("p2-12-help3"); tap(B_SEQ); shot_dev("p2-13-help4"); tap(B_SEQ);
+    tap(B_ARP); frames(2); shot_dev("p2-14-lesson"); tap(B_ARP); frames(150);
 
     /* ---- page 3 ---- */
     tap(B_SEQ); frames(100); shot_dev("p3-01-idle");
@@ -156,7 +166,8 @@ int main(int argc, char **argv)
     if (LEARN_PADS) pad(1, 100), pad(1, 0), pad(8 + RULE_THIRD, 100), pad(8 + RULE_THIRD, 0); else glo_key(1), glo_key(8 + RULE_THIRD);
     frames(2); shot_dev("p3-05-third-above");
     tap(B_HOME); frames(150); shot_dev("p3-06-stopped");
-    glo(B_SEQ); shot_dev("p3-07-help1"); tap(B_SEQ); shot_dev("p3-08-help2"); tap(B_SEQ); tap(B_SEQ);
+    glo(B_SEQ); shot_dev("p3-07-help1"); tap(B_SEQ); shot_dev("p3-08-help2"); tap(B_SEQ); shot_dev("p3-09-help3"); tap(B_SEQ); shot_dev("p3-10-help4"); tap(B_SEQ);
+    tap(B_ARP); frames(2); shot_dev("p3-11-lesson"); tap(B_ARP); frames(150);
 
     /* ---- page 4 ---- */
     tap(B_SEQ); frames(100); shot_dev("p4-01-idle");
@@ -177,7 +188,11 @@ int main(int argc, char **argv)
     frames(60); shot_dev("p4-05-recording");
     tap(B_HOME); frames(10); shot_dev("p4-06-record-kept");
     frames(150);
-    glo(B_SEQ); shot_dev("p4-07-help1"); tap(B_SEQ); shot_dev("p4-08-help2"); tap(B_SEQ); tap(B_SEQ);
-    printf("review " BOARD_TAG ": done\n");
+    glo(B_SEQ); shot_dev("p4-07-help1"); tap(B_SEQ); shot_dev("p4-08-help2"); tap(B_SEQ); shot_dev("p4-09-help3"); tap(B_SEQ); shot_dev("p4-10-help4"); tap(B_SEQ);
+    tap(B_ARP); frames(2); shot_dev("p4-11-lesson");
+    for (i = 0; i < 4u; i++) { key(7); frames(2); }
+    shot_dev("p4-12-song-lesson"); tap(B_ARP); frames(150);
+    if (ld_overflow) { printf("review " BOARD_TAG ": %u text draws ran off the screen, e.g. \"%s\"\n", ld_overflow, ld_overflow_text); return 1; }
+    printf("review " BOARD_TAG ": done, no text off the screen\n");
     return 0;
 }

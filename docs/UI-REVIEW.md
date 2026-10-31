@@ -1,4 +1,4 @@
-# UI review — learn firmware 0.3 (FM-1 and SMK-37 Elite)
+# UI review — learn firmware 0.3 (FM-1 and SMK-37 Elite), and the 0.4 fixes
 
 **Scope:** every screen of the four pages, the welcome screen, the help and the results log, on both boards, with the
 device lights. Judged against one question: *can a beginner do everything by reading the synth's own screen?*
@@ -13,6 +13,47 @@ in the first session, and a tail of medium/low polish. The critical ones are sma
 | High | 9 | overlapping or clipped text, stale screens, progress lost at power-off, controls not mapped on screen, dark pads |
 | Medium | 13 | labels and abbreviations, idle space, overlays, trainer feedback |
 | Low | 6 | duplicates and small polish |
+
+## Status in 0.4: every finding fixed
+
+The gallery (`docs/ui-review/`, now 59 states) shows the **0.4** screens; the 0.3 screens the findings below
+describe are in git at `a6aa990` (`git show a6aa990:docs/ui-review/<name>.png`). The host suite now also runs the
+review tour on both boards and **fails if any text runs off the screen** (`learn/draw.c` counts it in host builds).
+
+| ID | What changed | See |
+| --- | --- | --- |
+| C1 | The layer draws its own text from FONT_S, which has real lower case: `ii`, `vi`, `vii°`, `iiø7`; the big font too | `p1-06`, `p2-04` |
+| C2 | A scored step passes only at its target (`target` in the lesson JSON); otherwise it waits ("NOT YET: NEED 50%", "PLAY: AGAIN"), and after two misses suggests slow mode. The lesson logs its mean score | `p1-12b-lesson-retry` |
+| C3 | Echo, chord and progression drills hide the answer; a miss or a time-out lights, names and plays it ("MISS: HERE IT IS"). The scale drill keeps its lit key | `p1-10`, `p1-12a`, `p1-18` |
+| C4 | 16 new lessons: page 2 (21-26), page 3 (27-31), page 4 (32-36); each page's ARP starts its own next lesson | `p2-14`, `p3-11`, `p4-12` |
+| H1 | Page 2's bottom lines: one line at 194, the lock hint folded into it | `p2-02` |
+| H2 | Lesson notices have priority; "L1 DONE! ARP: NEXT, L2"; the pick advances to the next lesson | `p1-11` |
+| H3 | SMK-37: lesson progress + unlocks (16 bits) in SLOOP's settings object's spare bytes, saved by SLOOP's own quiet-time save (SAFETY.md). FM-1: no spare settings byte; the help says progress lasts till power-off | — |
+| H4 | A key change clears the last chord, the progression and the hint, and recolours the palette | `p1-17-g-minor` |
+| H5 | FM-1: progression line at 100, staff at 122 with a 42-px clear box | `p1-09` |
+| H6 | All strings shortened; lesson prompts limited to 29 characters by the generator; the host gate above | — |
+| H7 | `prompt_fm1` in the lesson JSON; the generator emits `LP(smk, fm1)` and each build keeps its own | `p1-08` |
+| H8 | Page 3: the rule list replaces the lanes while a source is armed, and help screen 4 lists the rules; page 2: SMK chord mode shows the pad palette, FM-1 with GLO held shows the keys as steps and bass rules | `p3-02`, `p2-03`, `p2-04` |
+| H9 | `P_DIM` is half with a 0x30 floor on lit channels; empty store pads faint white | pad strips |
+| M1 | Behind the help, the log or the welcome, the pages' clock stands still (drills, trainer) | — |
+| M2 | Log: `TRIES`, numbered newest first, "since power-on"; a lesson entry is `DONE` with its mean | `p1-13-log` |
+| M3 | Page 2's big line: a knob's value for 2 s, then bar + chord at the head (stopped: PRESS PLAY); page 3 idle: PICK A SOURCE | `p2-01`, `p3-01` |
+| M4 | Count-in: a big 4 3 2 1; a green square flashes when a tap is due; `100BPM` | `p2-06` |
+| M5 | `G MIN`, `TRANSITION: NONE`, an energy bar, `TAKE 1 OF 2`, `IN 4 BEATS`, `KEYS: CHORDS  BASS: KICK-LOCK`, `SLOW 95%`, `DENS 7` | `p4-*`, `p3-*` |
+| M6 | SMK page 1 help: faders 1/2/4, pads 8/16 | `p1-15`, `p1-16` |
+| M7 | A melody take shows a red "RECORDING ONE PASS: PLAY!" bar | `p2-08` |
+| M8 | The dot rows became one labelled `YOU` row (green: in the target) | `p1-12` |
+| M9 | Notices are a bar over the header; the bottom line is the why-hint's alone | `p1-07` |
+| M10 | Help screen 4 on page 1: the colour legend, each line in its colour, and the signs (capitals, °, ø, `*`) | `p1-16b-help4` |
+| M11 | Palette labels packed to the cell (6 px letters for 4-letter labels; sevenths `I7`…`viiø`) | `p1-02` |
+| M12 | LEARN mode runs on the default KNOB LAYOUT (K1 = volume) and gives the menu's setting back when it ends; the saved setting is the menu's | — |
+| M13 | The scale drill and a reveal name the note in the big line ("D4 PLAY THE LIT KEY") | — |
+| L1 | Lesson start says "LESSON ON (ARP: STOP IT)"; the title is shown once, with its number | `p1-08` |
+| L2 | Page 4's store hint appears once | `p4-01` |
+| L3 | "C# IS NOT IN C MAJOR" | `p1-05` |
+| L4 | The FM-1 staff has a treble clef | `p1-03` |
+| L5 | The key that closes the welcome screen does not sound | — |
+| L6 | Unchanged (25 fps cap, as SLOOP): still to watch on hardware | — |
 
 ## How this was reviewed
 

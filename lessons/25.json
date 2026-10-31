@@ -1,0 +1,25 @@
+{
+  "title": "A Chord Loop",
+  "stage": 2,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "FX: THE PADS PLAY CHORDS",
+      "prompt_fm1": "FX: THE KEYS PLAY CHORDS"
+    },
+    {
+      "type": "text",
+      "prompt": "SEQ PLAY, THEN SEQ REC TAP",
+      "prompt_fm1": "PLAY, THEN TAP REC"
+    },
+    {
+      "type": "text",
+      "prompt": "PLAY I V vi IV, ONE A BEAT"
+    },
+    {
+      "type": "text",
+      "prompt": "SEQ REC AGAIN: LOOP KEPT",
+      "prompt_fm1": "REC AGAIN: THE LOOP IS KEPT"
+    }
+  ]
+}

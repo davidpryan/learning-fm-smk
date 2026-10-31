@@ -96,7 +96,8 @@ enum { LB_FX = B_FX, LB_SCL = B_SCL, LB_ENV = B_ENV, LB_LFO = B_LFO, LB_EDIT = B
 #define LC_PURPLE 0xA81F
 #define LC_PANEL  0x1082
 #define LC_AMBER  0xFEA0
-/* Pad colours (0xRRGGBB) at the brightness SLOOP's own pad palette uses; P_DIM a quarter, P_FULL saturated. */
+/* Pad colours (0xRRGGBB) at the brightness SLOOP's own pad palette uses; P_DIM half (a lit channel never below 0x30,
+ * so a dim pad still reads as on), P_FULL saturated. */
 #define P_OFF    0x000000
 #define P_GREEN  0x1e9a50
 #define P_ORANGE 0xa04010
@@ -106,7 +107,16 @@ enum { LB_FX = B_FX, LB_SCL = B_SCL, LB_ENV = B_ENV, LB_LFO = B_LFO, LB_EDIT = B
 #define P_YELLOW 0xa08010
 #define P_WHITE  0x606060
 #define P_PURPLE 0x6a20a0
-#define P_DIM(c) ((((c) >> 2) & 0x3f3f3f))
+static uint32_t P_DIM(uint32_t c)
+{
+    uint32_t out = 0, sh;
+    for (sh = 0; sh < 24u; sh += 8u) {
+        uint32_t v = (c >> sh) & 255u, d = v >> 1;
+        if (v >= 0x30u && d < 0x30u) d = 0x30u;
+        out |= d << sh;
+    }
+    return out;
+}
 static uint32_t P_FULL(uint32_t c)
 {
     uint32_t r = ((c >> 16) & 255u) * 2u, g = ((c >> 8) & 255u) * 2u, b = (c & 255u) * 2u;
@@ -190,7 +200,7 @@ static void log_unlock(unsigned feature);
 enum { UNLOCK_SWING = 1, UNLOCK_FILL = 2, UNLOCK_STAGE2 = 4, UNLOCK_STAGE3 = 8, UNLOCK_STAGE4 = 16 };
 static int log_dump(uint8_t *out, unsigned capacity);
 
-/* ---- lesson packs (lessons.c, generated from lessons/*.json) ---- */
+/* ---- lesson packs (lessons.c, generated from the lessons/ JSON files) ---- */
 enum { DR_ECHO = 1, DR_CHORD = 2, DR_PROGRESSION = 3, DR_SCALE = 4, DR_RHYTHM = 5,
        DR_GROOVE = 6, DR_REFTAKE = 7, DR_SONG = 8, DR_TEXT = 9 };
 struct lesson_step {
@@ -264,13 +274,19 @@ static unsigned lesson_running(void);
 static const struct lesson_step *lesson_step(void);
 static void lesson_step_done(unsigned passed, unsigned score);
 static unsigned lesson_progress(void);
+static unsigned lesson_need(void);                /* the running step's target score (%) */
+static unsigned lesson_retrying(void);            /* the running step was tried and not passed yet */
+static unsigned lesson_pick(unsigned page);       /* the lesson ARP starts on a page (lesson_count: none) */
+static void lesson_pick_turn(unsigned page, int d);
+static unsigned lesson_name(char *b, unsigned cap, unsigned index);   /* "L3 HOME NOTE" (" *": passed) */
+static void learn_notice_hi(const char *text, unsigned ms);
 /* the key lights (FM-1: the LEDs under the 27 keys; both: the keymap strip): bit k = key k from F3 */
 static uint32_t llit_keys, lbright_keys;
 /* overlays shared by every page (main.c): the results log (GLO + ARP) and the page's help (GLO + SEQ) */
 static uint8_t lov_log, lov_help, lov_welcome;   /* lov_help: 0 off, 1.. the help screen shown */
-#define HELP_SCREENS 3u
+#define HELP_SCREENS 4u
 /* the last drill's result, shown until the player plays again (page 1 fills it; main.c draws nothing of it) */
-static struct { uint8_t valid, kind, passed; unsigned hits, misses, pct; } lresult;
+static struct { uint8_t valid, kind, passed; unsigned hits, misses, pct, need; } lresult;
 /* the metronome / clock the stages share: SLOOP's tempo */
 static unsigned learn_bpm(void);
 static void learn_set_bpm(unsigned bpm);

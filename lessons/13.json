@@ -17,7 +17,8 @@
       "key": "C major",
       "seventh": true,
       "target": 75,
-      "prompt": "BOTTOM PADS: WHICH 7TH?"
+      "prompt": "BOTTOM PADS: WHICH 7TH?",
+      "prompt_fm1": "WHICH 7TH? PLAY ALL 4 NOTES"
     }
   ]
 }

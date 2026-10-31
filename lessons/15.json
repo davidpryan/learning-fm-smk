@@ -14,7 +14,7 @@
       ],
       "key": "A blues",
       "target": 75,
-      "prompt": "COPY THE BLUE NOTES"
+      "prompt": "COPY NOTES OF THE BLUES SCALE"
     },
     {
       "type": "progression",
@@ -27,7 +27,7 @@
       "key": "A major",
       "seventh": true,
       "target": 75,
-      "prompt": "I7 - IV7 - V7"
+      "prompt": "Imaj7 - IVmaj7 - V7"
     }
   ],
   "unlocks": [

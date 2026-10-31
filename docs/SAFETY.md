@@ -8,10 +8,21 @@ a flashing path**, and the stock tools still see the device as usual.
 
 ## What is and is not written
 
-**The learn layer writes no Flash at all.** The practice log, takes, sections
-and lessons live in RAM; the lesson packs are compiled in. What SLOOP itself
-stores (its project autosave, settings, user presets, samples) is SLOOP's
-normal, well-tested behaviour and is unchanged by the learn layer.
+**The learn layer has no Flash code of its own.** The practice log, takes,
+sections and lessons live in RAM; the lesson packs are compiled in. What SLOOP
+itself stores (its project autosave, settings, user presets, samples) is
+SLOOP's normal, well-tested behaviour.
+
+One small thing is kept across power-off on the **SMK-37** only: the lesson
+progress (which lesson each page is at, and the swing / fill unlocks), 16 bits.
+It rides in the two spare bytes of SLOOP's own SMK-37 settings object
+(`OBJ_SMKSET`, `project.c smkset_t rsv[2]`, which were always written as zero),
+through SLOOP's existing settings save: same object, same size, same store
+code, written only when the device is quiet and only when a value changed (a
+lesson finished). No new object, address or write path. An older record reads
+as "no progress yet". The FM-1 has no spare settings byte, so there the
+progress lasts until power-off (the pick knob gets you back to any lesson).
+The FM-1 build without the learn layer stays byte-identical to SLOOP's.
 
 Never written by SLOOP or by this project: the bootloader (0x00000–0x03FFF),
 the Bluetooth pairing area (BTIF), the factory calibration record

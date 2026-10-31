@@ -1,0 +1,31 @@
+{
+  "title": "Offbeats",
+  "stage": 2,
+  "unlocks": [
+    "fill"
+  ],
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "THE AND: HALFWAY TO THE BEAT"
+    },
+    {
+      "type": "rhythm",
+      "count": 2,
+      "tempo": 80,
+      "pattern": "x.x.x.x.x.x.x.x.",
+      "target": 70,
+      "prompt": "PAD 1: BEATS AND ANDS",
+      "prompt_fm1": "TAP THE BEATS AND THE ANDS"
+    },
+    {
+      "type": "rhythm",
+      "count": 2,
+      "tempo": 80,
+      "pattern": "..x...x...x...x.",
+      "target": 60,
+      "prompt": "PAD 1: ONLY THE ANDS",
+      "prompt_fm1": "TAP ONLY THE ANDS"
+    }
+  ]
+}

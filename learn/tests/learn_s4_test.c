@@ -2,6 +2,7 @@
 /* Stage 4 (Scribe, the FM-1 build) on SLOOP's UI harness: sections stored and recalled at the loop boundary,
  * energy mutes, transitions, the song record. */
 #define UI_PAGES_HARNESS_ONLY 1
+#define LEARN_HOST 1
 #include "../pre.h"
 #include "ui_pages_test.c"
 #include "../learn.c"

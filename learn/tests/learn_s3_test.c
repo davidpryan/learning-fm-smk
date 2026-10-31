@@ -2,6 +2,7 @@
 /* Stage 3 (Tape, the FM-1 build) on SLOOP's UI harness: shadows render onto SLOOP's tracks and follow their
  * sources, the tape takes a pass, undo / A-B, solo, export. */
 #define UI_PAGES_HARNESS_ONLY 1
+#define LEARN_HOST 1
 #include "../pre.h"
 #include "ui_pages_test.c"
 #include "../learn.c"

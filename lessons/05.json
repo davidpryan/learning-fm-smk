@@ -15,7 +15,8 @@
       "key": "C major",
       "seventh": false,
       "target": 60,
-      "prompt": "PRESS THE GREEN PAD"
+      "prompt": "PRESS THE GREEN PAD",
+      "prompt_fm1": "CHORD KEYS (GLO+SCL): KEY C"
     },
     {
       "type": "chord",
@@ -27,7 +28,8 @@
       "key": "C major",
       "seventh": false,
       "target": 70,
-      "prompt": "GREEN (I) OR ORANGE (V)?"
+      "prompt": "GREEN (I) OR ORANGE (V)?",
+      "prompt_fm1": "C (I) OR G (V)? PLAY IT"
     }
   ]
 }

@@ -1,0 +1,26 @@
+{
+  "title": "Start And End",
+  "stage": 4,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "AN INTRO OPENS, OUTRO CLOSES"
+    },
+    {
+      "type": "text",
+      "prompt": "STORE AN INTRO AND AN OUTRO"
+    },
+    {
+      "type": "song",
+      "order": [
+        "intro",
+        "verse",
+        "chorus",
+        "outro"
+      ],
+      "target": 70,
+      "prompt": "SEQ REC, PADS, PATCH TO END",
+      "prompt_fm1": "REC, GLO+KEYS, HOME TO END"
+    }
+  ]
+}

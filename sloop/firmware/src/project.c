@@ -816,6 +816,13 @@ static void smkset_fill(smkset_t *s)
     s->bdn = (uint8_t)bend_dn_byte(bend_dn, bend_up);
     s->lim = (uint8_t)(lim_classic != 0u);
     s->klay = (uint8_t)(knob_layout != 0u);
+#if FELUCCA_LEARN
+    /* the learn layer: its progress in the two spare bytes (0 0: none yet), and KNOB LAYOUT as the menu set it
+     * (LEARN mode runs on the FM-1 layout and gives the menu's back when it ends) */
+    s->klay = (uint8_t)((learn_on ? learn_klay_keep : knob_layout) != 0u);
+    s->rsv[0] = (uint8_t)(lprog_word & 255u);
+    s->rsv[1] = (uint8_t)(lprog_word >> 8);
+#endif
 }
 static void smkset_boot(void)                      /* after the settings (persist_boot, dsu_boot) */
 {
@@ -828,6 +835,9 @@ static void smkset_boot(void)                      /* after the settings (persis
         lim_classic = (uint8_t)(s.lim & 1u);
         knob_layout = (uint8_t)(s.klay & 1u);
         knob_layout_apply();
+#if FELUCCA_LEARN
+        lprog_word = (uint16_t)(s.rsv[0] | (uint16_t)s.rsv[1] << 8);
+#endif
         smkset_fill(&smkset_saved);
         return;
     }

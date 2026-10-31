@@ -1,0 +1,25 @@
+{
+  "title": "Your First Shadow",
+  "stage": 3,
+  "steps": [
+    {
+      "type": "text",
+      "prompt": "A SHADOW: A PART BY A RULE"
+    },
+    {
+      "type": "text",
+      "prompt": "PAD 2 (MELODY), THEN PAD 11",
+      "prompt_fm1": "GLO+KEY 2, THEN GLO+KEY 11"
+    },
+    {
+      "type": "text",
+      "prompt": "NOTE RPT: SOURCE, THEN SHADOW",
+      "prompt_fm1": "LFO: SOURCE, THEN SHADOW"
+    },
+    {
+      "type": "text",
+      "prompt": "FX REMOVES IT. TRY PAD 12",
+      "prompt_fm1": "FX REMOVES IT. GLO+KEY 12"
+    }
+  ]
+}
