@@ -25,6 +25,8 @@ locked, so you can look ahead.
 the host test suite (every page, on SLOOP's own UI harness). They have not
 yet been run on hardware. Read `docs/SAFETY.md` before installing anything.
 
+**New here?** Start with [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) (15 minutes, both devices); the full reference is [docs/MANUAL.md](docs/MANUAL.md).
+
 ## Install
 
 Releases (`vX.Y` tags) publish an install site with **one installer page per
