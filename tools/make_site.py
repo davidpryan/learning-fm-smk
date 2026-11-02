@@ -85,7 +85,7 @@ GLO + HOME held two seconds switches between LEARN and plain SLOOP. GPL-3.0-only
     <li>Check the SHA-256 on this page against the sidecar in the release.</li>
     <li>Do not touch the device until it restarts. If the install is cut off, the device stays in update mode: press INSTALL again.</li>
   </ol>
-  <p class="dim">The learn layer never writes Flash itself (practice log, takes and sections live in RAM). Recovery: <a href="https://github.com/davidpryan/learning-fm-smk/blob/main/docs/RECOVERY.md">docs/RECOVERY.md</a>.</p>
+  <p class="dim">The learn layer has no Flash code of its own (practice log, takes and sections live in RAM); on the SMK-37 its lesson progress rides in two spare bytes of SLOOP's own settings record, saved by SLOOP's normal settings save. Recovery: <a href="https://github.com/davidpryan/learning-fm-smk/blob/main/docs/RECOVERY.md">docs/RECOVERY.md</a>.</p>
 </section>
 {cards}
 <p class="dim">Provenance: <a href="provenance.json">provenance.json</a> (commit, SLOOP upstream commit, checksums).
